@@ -17,6 +17,8 @@ Panel {
   property var snapshot: ({ accounts: [], unreadTotal: 0 })
   property string languageSource: String(setting("languageSource", "system"))
   property string privacyMode: String(setting("privacyMode", "full"))
+  property bool languageMenuOpen: false
+  property bool privacyMenuOpen: false
   property int notifiedEvent: 0
   readonly property string lang: Model.localeCode(languageSource, Qt.locale().name, snapshot.thunderbirdLanguage)
   readonly property int unreadCount: Number(snapshot.unreadTotal || 0)
@@ -114,25 +116,31 @@ Panel {
             spacing: Style.space(6)
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            ComboBox {
+            Rectangle {
+              id: languageSelector
               width: Style.space(148)
               height: Style.space(30)
-              model: [root.tr("systemLanguage"), root.tr("thunderbirdLanguage")]
-              currentIndex: root.languageSource === "thunderbird" ? 1 : 0
-              contentItem: Text { leftPadding: Style.space(8); rightPadding: Style.space(22); text: parent.displayText; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight }
-              background: Rectangle { radius: Style.cornerRadius; color: "transparent"; border.color: Color.accent; border.width: 1 }
-              indicator: Text { text: ""; color: Color.accent; font.family: root.bar.fontFamily; anchors.right: parent.right; anchors.rightMargin: Style.space(7); anchors.verticalCenter: parent.verticalCenter }
-              onActivated: function(index) { root.languageSource = index === 1 ? "thunderbird" : "system" }
+              radius: Style.cornerRadius; color: "transparent"; border.color: Color.accent; border.width: 1
+              Text { anchors.left: parent.left; anchors.right: parent.right; anchors.leftMargin: Style.space(8); anchors.rightMargin: Style.space(20); anchors.verticalCenter: parent.verticalCenter; text: root.languageSource === "thunderbird" ? root.tr("thunderbirdLanguage") : root.tr("systemLanguage"); color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
+              Text { text: ""; color: Color.accent; font.family: root.bar.fontFamily; anchors.right: parent.right; anchors.rightMargin: Style.space(7); anchors.verticalCenter: parent.verticalCenter }
+              MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.languageMenuOpen = !root.languageMenuOpen; root.privacyMenuOpen = false } }
+              Rectangle {
+                visible: root.languageMenuOpen; z: 10; anchors.top: parent.bottom; anchors.topMargin: Style.space(4); width: parent.width; height: languageChoices.implicitHeight + Style.space(6); radius: Style.cornerRadius; color: root.bar.background; border.color: Color.accent; border.width: 1
+                Column { id: languageChoices; anchors.left: parent.left; anchors.right: parent.right; anchors.margins: Style.space(3); Repeater { model: [{key:"system", label:root.tr("systemLanguage")}, {key:"thunderbird", label:root.tr("thunderbirdLanguage")}]; delegate: Rectangle { required property var modelData; width: parent.width; height: Style.space(28); radius: Style.cornerRadius; color: choiceTap.containsMouse ? Color.accent : "transparent"; Text { anchors.fill: parent; anchors.leftMargin: Style.space(7); verticalAlignment: Text.AlignVCenter; text: modelData.label; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }; MouseArea { id: choiceTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { root.languageSource = modelData.key; root.languageMenuOpen = false } } } } }
+              }
             }
-            ComboBox {
+            Rectangle {
+              id: privacySelector
               width: Style.space(92)
               height: Style.space(30)
-              model: [root.tr("full"), root.tr("private")]
-              currentIndex: root.privacyMode === "private" ? 1 : 0
-              contentItem: Text { leftPadding: Style.space(8); rightPadding: Style.space(22); text: parent.displayText; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight }
-              background: Rectangle { radius: Style.cornerRadius; color: "transparent"; border.color: Color.accent; border.width: 1 }
-              indicator: Text { text: ""; color: Color.accent; font.family: root.bar.fontFamily; anchors.right: parent.right; anchors.rightMargin: Style.space(7); anchors.verticalCenter: parent.verticalCenter }
-              onActivated: function(index) { root.privacyMode = index === 1 ? "private" : "full" }
+              radius: Style.cornerRadius; color: "transparent"; border.color: Color.accent; border.width: 1
+              Text { anchors.left: parent.left; anchors.right: parent.right; anchors.leftMargin: Style.space(8); anchors.rightMargin: Style.space(20); anchors.verticalCenter: parent.verticalCenter; text: root.privacyMode === "private" ? root.tr("private") : root.tr("full"); color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
+              Text { text: ""; color: Color.accent; font.family: root.bar.fontFamily; anchors.right: parent.right; anchors.rightMargin: Style.space(7); anchors.verticalCenter: parent.verticalCenter }
+              MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.privacyMenuOpen = !root.privacyMenuOpen; root.languageMenuOpen = false } }
+              Rectangle {
+                visible: root.privacyMenuOpen; z: 10; anchors.top: parent.bottom; anchors.topMargin: Style.space(4); width: parent.width; height: privacyChoices.implicitHeight + Style.space(6); radius: Style.cornerRadius; color: root.bar.background; border.color: Color.accent; border.width: 1
+                Column { id: privacyChoices; anchors.left: parent.left; anchors.right: parent.right; anchors.margins: Style.space(3); Repeater { model: [{key:"full", label:root.tr("full")}, {key:"private", label:root.tr("private")}]; delegate: Rectangle { required property var modelData; width: parent.width; height: Style.space(28); radius: Style.cornerRadius; color: privacyTap.containsMouse ? Color.accent : "transparent"; Text { anchors.fill: parent; anchors.leftMargin: Style.space(7); verticalAlignment: Text.AlignVCenter; text: modelData.label; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }; MouseArea { id: privacyTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { root.privacyMode = modelData.key; root.privacyMenuOpen = false } } } } }
+              }
             }
           }
         }
@@ -174,7 +182,7 @@ Panel {
                 Text { id: expandIcon; text: modelData.expanded ? "" : ""; color: root.bar.foreground; font.family: root.bar.fontFamily; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter }
                 Text { id: envelopeIcon; text: "󰇮"; color: Color.accent; font.family: root.bar.fontFamily; anchors.left: expandIcon.right; anchors.leftMargin: Style.space(8); anchors.verticalCenter: parent.verticalCenter }
                 Text { id: badge; width: Math.max(Style.space(26), implicitWidth + Style.space(8)); height: Style.space(20); text: String(modelData.unreadCount || 0); color: Color.accent; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; Rectangle { anchors.fill: parent; z: -1; radius: height / 2; color: "transparent"; border.color: Color.accent; border.width: 1 } }
-                Text { text: modelData.email || modelData.name; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; font.bold: true; anchors.left: envelopeIcon.right; anchors.leftMargin: Style.space(8); anchors.right: badge.left; anchors.rightMargin: Style.space(8); anchors.verticalCenter: parent.verticalCenter; elide: Text.ElideRight }
+                Text { text: (modelData.email || modelData.name) + "  (" + String(modelData.unreadCount || 0) + ")"; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; font.bold: true; anchors.left: envelopeIcon.right; anchors.leftMargin: Style.space(8); anchors.right: badge.left; anchors.rightMargin: Style.space(8); anchors.verticalCenter: parent.verticalCenter; elide: Text.ElideRight }
               }
               MouseArea { id: accountTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.toggleAccount(index) }
             }
