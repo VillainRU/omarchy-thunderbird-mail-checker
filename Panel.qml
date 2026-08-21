@@ -94,6 +94,7 @@ Panel {
     contentHeight: popup.fittedContentHeight(content.implicitHeight, Style.space(620))
 
     Flickable {
+      id: mailScroll
       anchors.fill: parent
       contentWidth: width
       contentHeight: content.implicitHeight
@@ -102,7 +103,7 @@ Panel {
 
       Column {
         id: content
-        width: popup.width - popup.padding * 2
+        width: mailScroll.width
         spacing: Style.space(10)
 
         Item {
