@@ -26,7 +26,7 @@ STATE_DIR = pathlib.Path(os.environ.get("XDG_STATE_HOME", pathlib.Path.home() / 
 RUNTIME_DIR = pathlib.Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp"))
 SOCKET_PATH = RUNTIME_DIR / (APP + ".sock")
 STATUS_PATH = STATE_DIR / "status.json"
-QUEUE_PATH = STATE_DIR / "queued-actions.json"
+LEGACY_QUEUE_PATH = STATE_DIR / "queued-actions.json"
 
 def atomic_json(path, value):
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -95,11 +95,6 @@ def focus_thunderbird():
     except (OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired):
         pass
 
-def queue_action(payload):
-    queued = load_json(QUEUE_PATH, [])
-    queued.append(payload)
-    atomic_json(QUEUE_PATH, queued[-20:])
-
 def command_status():
     try:
         response = request_socket({"type": "status"})
@@ -121,9 +116,7 @@ def command_action(action, message_id):
             return 0 if response.get("ok") else 1
     except OSError:
         pass
-    queue_action(payload)
-    subprocess.Popen(["thunderbird"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
-    print(json.dumps({"ok": True, "queued": True}, ensure_ascii=False)); return 0
+    print(json.dumps({"ok": False, "error": "Thunderbird bridge is unavailable"}, ensure_ascii=False)); return 1
 
 def read_native(stream):
     header = stream.read(4)
@@ -141,12 +134,13 @@ def write_native(payload):
 
 def native_host():
     STATE_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
+    try: LEGACY_QUEUE_PATH.unlink()
+    except FileNotFoundError: pass
     try: SOCKET_PATH.unlink()
     except FileNotFoundError: pass
     server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     server.bind(str(SOCKET_PATH)); os.chmod(SOCKET_PATH, 0o600); server.listen(8); server.settimeout(0.2)
     pending = {}
-    queued = []
     native_ready = False
     inbound = queue.Queue()
 
@@ -178,7 +172,7 @@ def native_host():
                         pending[request["requestId"]] = client
                         write_native(request)
                     else:
-                        queue_action(request); client.sendall(b'{"ok":true,"queued":true}\n'); client.close()
+                        client.sendall(b'{"ok":false,"error":"Thunderbird bridge is unavailable"}\n'); client.close()
                 else:
                     client.sendall(b'{"ok":false,"error":"bad request"}\n'); client.close()
             except socket.timeout:
@@ -197,11 +191,6 @@ def native_host():
                     atomic_json(STATUS_PATH, status)
                 elif kind == "ready":
                     native_ready = True
-                    queued = load_json(QUEUE_PATH, [])
-                    if queued:
-                        try: QUEUE_PATH.unlink()
-                        except FileNotFoundError: pass
-                        for action in queued: write_native(action)
                 elif kind == "action-result":
                     client = pending.pop(message.get("requestId"), None)
                     if client:

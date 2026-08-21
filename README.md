@@ -4,7 +4,7 @@ An Omarchy QuickShell plugin that shows the total number of unread Inbox message
 
 ## Privacy and security
 
-The plugin has no network backend and never reads Thunderbird passwords, OAuth tokens, or message bodies. Its companion MailExtension sends only the metadata needed by the panel (account label, sender, subject, date, star, attachment flag and internal message id) to a local Unix socket and to a mode-0600 local cache. Thunderbird's extension permission screen is the single authorization point for mailbox access.
+The plugin has no network backend and never reads Thunderbird passwords, OAuth tokens, or message bodies. Its companion MailExtension sends only the metadata needed by the panel (account label, sender, subject, date, star, attachment flag and internal message id) to a local Unix socket and to a mode-0600 local cache. Mailbox labels, senders, and subjects are rendered only as plain text. Actions are sent only to a live Thunderbird bridge and are never queued across restarts. Thunderbird's extension permission screen is the single authorization point for mailbox access.
 
 ## Install
 

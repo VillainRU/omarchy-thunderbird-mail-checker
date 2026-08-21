@@ -18,6 +18,20 @@ PY
 
 echo "protocol fallback: ok"
 
+if "$helper" action open 123 > "$task_tmp/unavailable-action.json"; then
+  echo "an unavailable action must fail instead of being queued" >&2
+  exit 1
+fi
+python - "$task_tmp/unavailable-action.json" "$XDG_STATE_HOME" <<'PY'
+import json, pathlib, sys
+result = json.load(open(sys.argv[1]))
+assert result["ok"] is False
+assert "unavailable" in result["error"]
+assert not (pathlib.Path(sys.argv[2]) / "thunderbird-mail-checker" / "queued-actions.json").exists()
+PY
+
+echo "unavailable action: not queued"
+
 python - "$helper" <<'PY'
 import json
 import os
