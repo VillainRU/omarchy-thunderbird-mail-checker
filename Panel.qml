@@ -21,7 +21,6 @@ Panel {
   property bool privacyMenuOpen: false
   property int notifiedEvent: 0
   property var expandedAccounts: ({})
-  property bool forcePreviewLayoutCheck: true
   readonly property string lang: Model.localeCode(languageSource, Qt.locale().name, snapshot.thunderbirdLanguage)
   readonly property int unreadCount: Number(snapshot.unreadTotal || 0)
   readonly property string tooltip: unreadCount > 0 ? unreadCount + " " + Model.text(lang, "unread") : Model.text(lang, "noUnread")
@@ -229,12 +228,10 @@ Panel {
 
             Repeater {
               width: parent.width
-              model: (root.forcePreviewLayoutCheck || root.accountExpanded(modelData, index)) ? (modelData.messages || []) : []
+              model: root.accountExpanded(modelData, index) ? (modelData.messages || []) : []
               delegate: Rectangle {
                 id: mailRow
                 required property var modelData
-                Component.onCompleted: console.log("mail-preview-layout", width, replyButton.x, replyButton.width, replyButton.visible, replyButton.text)
-                Timer { interval: 1000; running: true; repeat: false; onTriggered: console.log("mail-preview-layout-final", mailRow.width, replyButton.x, replyButton.width, replyButton.visible, replyButton.text) }
                 width: parent.width - Style.space(8)
                 x: Style.space(8)
                 height: Style.space(51)
@@ -255,7 +252,7 @@ Panel {
                   }
                   Text {
                     id: replyButton
-                    text: "[↩] [⌫] [!] TEST"
+                    text: "[↩] [⌫] [!]"
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     color: Color.accent
