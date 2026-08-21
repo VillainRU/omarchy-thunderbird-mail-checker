@@ -20,6 +20,7 @@ Panel {
   property bool languageMenuOpen: false
   property bool privacyMenuOpen: false
   property int notifiedEvent: 0
+  property var expandedAccounts: ({})
   readonly property string lang: Model.localeCode(languageSource, Qt.locale().name, snapshot.thunderbirdLanguage)
   readonly property int unreadCount: Number(snapshot.unreadTotal || 0)
   readonly property string tooltip: unreadCount > 0 ? unreadCount + " " + Model.text(lang, "unread") : Model.text(lang, "noUnread")
@@ -56,19 +57,19 @@ Panel {
     actionProc.command = [helper, "action", action, String(message.id)]
     actionProc.running = true
   }
+  function accountKey(account, index) {
+    return String(account.email || account.name || index)
+  }
+  function accountExpanded(account, index) {
+    return Boolean(expandedAccounts[accountKey(account, index)])
+  }
   function toggleAccount(index) {
-    var updatedAccounts = accounts.slice()
-    if (!updatedAccounts[index]) return
-
-    var updatedAccount = {}
-    for (var accountKey in updatedAccounts[index]) updatedAccount[accountKey] = updatedAccounts[index][accountKey]
-    updatedAccount.expanded = !Boolean(updatedAccount.expanded)
-    updatedAccounts[index] = updatedAccount
-
-    var updatedSnapshot = {}
-    for (var snapshotKey in snapshot) updatedSnapshot[snapshotKey] = snapshot[snapshotKey]
-    updatedSnapshot.accounts = updatedAccounts
-    snapshot = updatedSnapshot
+    if (!accounts[index]) return
+    var next = {}
+    for (var key in expandedAccounts) next[key] = expandedAccounts[key]
+    var key = accountKey(accounts[index], index)
+    next[key] = !Boolean(next[key])
+    expandedAccounts = next
   }
 
   Timer { interval: 60000; running: true; repeat: true; triggeredOnStart: true; onTriggered: root.refresh() }
@@ -215,7 +216,7 @@ Panel {
                 anchors.fill: parent
                 anchors.leftMargin: Style.space(8)
                 anchors.rightMargin: Style.space(8)
-                Text { id: expandIcon; text: modelData.expanded ? "" : ""; color: root.bar.foreground; font.family: root.bar.fontFamily; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter }
+                Text { id: expandIcon; text: root.accountExpanded(modelData, index) ? "" : ""; color: root.bar.foreground; font.family: root.bar.fontFamily; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter }
                 Text { id: envelopeIcon; text: "󰇮"; color: Color.accent; font.family: root.bar.fontFamily; anchors.left: expandIcon.right; anchors.leftMargin: Style.space(8); anchors.verticalCenter: parent.verticalCenter }
                 Text { id: badge; width: Math.max(Style.space(26), implicitWidth + Style.space(8)); height: Style.space(20); text: String(modelData.unreadCount || 0); color: Color.accent; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; Rectangle { anchors.fill: parent; z: -1; radius: height / 2; color: "transparent"; border.color: Color.accent; border.width: 1 } }
                 Text { text: (modelData.email || modelData.name) + "  (" + String(modelData.unreadCount || 0) + ")"; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; font.bold: true; anchors.left: envelopeIcon.right; anchors.leftMargin: Style.space(8); anchors.right: badge.left; anchors.rightMargin: Style.space(8); anchors.verticalCenter: parent.verticalCenter; elide: Text.ElideRight }
@@ -224,7 +225,7 @@ Panel {
             }
 
             Repeater {
-              model: modelData.expanded ? (modelData.messages || []) : []
+              model: root.accountExpanded(modelData, index) ? (modelData.messages || []) : []
               delegate: Rectangle {
                 required property var modelData
                 width: parent.width - Style.space(8)
