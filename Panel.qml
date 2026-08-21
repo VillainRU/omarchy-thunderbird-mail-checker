@@ -28,6 +28,28 @@ Panel {
   readonly property string helper: Quickshell.env("HOME") + "/.config/omarchy/plugins/io.github.villainru.thunderbird-mail-checker/bin/thunderbird-mail-checker"
 
   function tr(key) { return Model.text(lang, key) }
+  function persistSettings(values) {
+    var entry = { id: root.moduleName }
+    for (var existing in root.settings) if (existing !== "id") entry[existing] = root.settings[existing]
+    for (var key in values) entry[key] = values[key]
+
+    root.settings = entry
+    if (root.hostWidget && "settings" in root.hostWidget) root.hostWidget.settings = entry
+    if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
+      root.bar.shell.updateEntryInline(root.moduleName, entry)
+  }
+  function chooseLanguage(source) {
+    languageSource = source
+    languageMenuOpen = false
+    privacyMenuOpen = false
+    persistSettings({ languageSource: source })
+  }
+  function choosePrivacyMode(mode) {
+    privacyMode = mode
+    languageMenuOpen = false
+    privacyMenuOpen = false
+    persistSettings({ privacyMode: mode })
+  }
   function open() { controller.show(); refresh() }
   function close() { controller.hide() }
   function toggle() { opened ? close() : open() }
@@ -149,7 +171,7 @@ Panel {
                       width: parent.width; height: Style.space(28); radius: Style.cornerRadius
                       color: choiceTap.containsMouse ? Color.accent : "transparent"
                       Text { anchors.fill: parent; anchors.leftMargin: Style.space(7); verticalAlignment: Text.AlignVCenter; text: modelData.label; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
-                      MouseArea { id: choiceTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { root.languageSource = modelData.key; root.languageMenuOpen = false } }
+                      MouseArea { id: choiceTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: function(mouse) { mouse.accepted = true; root.chooseLanguage(modelData.key) } }
                     }
                   }
                 }
@@ -175,7 +197,7 @@ Panel {
                       width: parent.width; height: Style.space(28); radius: Style.cornerRadius
                       color: privacyTap.containsMouse ? Color.accent : "transparent"
                       Text { anchors.fill: parent; anchors.leftMargin: Style.space(7); verticalAlignment: Text.AlignVCenter; text: modelData.label; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
-                      MouseArea { id: privacyTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { root.privacyMode = modelData.key; root.privacyMenuOpen = false } }
+                      MouseArea { id: privacyTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: function(mouse) { mouse.accepted = true; root.choosePrivacyMode(modelData.key) } }
                     }
                   }
                 }
