@@ -116,14 +116,22 @@ Panel {
             anchors.verticalCenter: parent.verticalCenter
             ComboBox {
               width: Style.space(148)
+              height: Style.space(30)
               model: [root.tr("systemLanguage"), root.tr("thunderbirdLanguage")]
               currentIndex: root.languageSource === "thunderbird" ? 1 : 0
+              contentItem: Text { leftPadding: Style.space(8); rightPadding: Style.space(22); text: parent.displayText; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight }
+              background: Rectangle { radius: Style.cornerRadius; color: "transparent"; border.color: Color.accent; border.width: 1 }
+              indicator: Text { text: ""; color: Color.accent; font.family: root.bar.fontFamily; anchors.right: parent.right; anchors.rightMargin: Style.space(7); anchors.verticalCenter: parent.verticalCenter }
               onActivated: function(index) { root.languageSource = index === 1 ? "thunderbird" : "system" }
             }
             ComboBox {
               width: Style.space(92)
+              height: Style.space(30)
               model: [root.tr("full"), root.tr("private")]
               currentIndex: root.privacyMode === "private" ? 1 : 0
+              contentItem: Text { leftPadding: Style.space(8); rightPadding: Style.space(22); text: parent.displayText; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight }
+              background: Rectangle { radius: Style.cornerRadius; color: "transparent"; border.color: Color.accent; border.width: 1 }
+              indicator: Text { text: ""; color: Color.accent; font.family: root.bar.fontFamily; anchors.right: parent.right; anchors.rightMargin: Style.space(7); anchors.verticalCenter: parent.verticalCenter }
               onActivated: function(index) { root.privacyMode = index === 1 ? "private" : "full" }
             }
           }
@@ -165,7 +173,7 @@ Panel {
                 anchors.rightMargin: Style.space(8)
                 Text { id: expandIcon; text: modelData.expanded ? "" : ""; color: root.bar.foreground; font.family: root.bar.fontFamily; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter }
                 Text { id: envelopeIcon; text: "󰇮"; color: Color.accent; font.family: root.bar.fontFamily; anchors.left: expandIcon.right; anchors.leftMargin: Style.space(8); anchors.verticalCenter: parent.verticalCenter }
-                Rectangle { id: badge; width: Math.max(Style.space(26), countText.implicitWidth + Style.space(8)); height: Style.space(20); radius: height / 2; color: "transparent"; border.color: Color.accent; border.width: 1; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; Text { id: countText; anchors.centerIn: parent; text: String(modelData.unreadCount || 0); color: Color.accent; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; font.bold: true } }
+                Text { id: badge; width: Math.max(Style.space(26), implicitWidth + Style.space(8)); height: Style.space(20); text: String(modelData.unreadCount || 0); color: Color.accent; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; Rectangle { anchors.fill: parent; z: -1; radius: height / 2; color: "transparent"; border.color: Color.accent; border.width: 1 } }
                 Text { text: modelData.email || modelData.name; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; font.bold: true; anchors.left: envelopeIcon.right; anchors.leftMargin: Style.space(8); anchors.right: badge.left; anchors.rightMargin: Style.space(8); anchors.verticalCenter: parent.verticalCenter; elide: Text.ElideRight }
               }
               MouseArea { id: accountTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.toggleAccount(index) }
