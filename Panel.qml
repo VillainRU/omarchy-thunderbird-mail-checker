@@ -97,7 +97,7 @@ Panel {
 
         Item {
           width: parent.width
-          height: Math.max(titleText.implicitHeight, controls.implicitHeight)
+          height: Math.max(titleText.implicitHeight, controls.height)
           Text {
             id: titleText
             text: root.tr("title")
@@ -113,6 +113,8 @@ Panel {
           }
           Row {
             id: controls
+            width: Style.space(246)
+            height: Style.space(30)
             spacing: Style.space(6)
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
