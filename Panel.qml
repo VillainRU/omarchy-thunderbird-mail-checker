@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import Quickshell
 import Quickshell.Io
 import qs.Commons
 import qs.Ui
@@ -9,7 +10,6 @@ Panel {
   id: root
   moduleName: "io.github.villainru.thunderbird-mail-checker"
   ipcTarget: "io.github.villainru.thunderbird-mail-checker"
-  manageIpc: false
 
   property var anchorItem: null
   property var hostWidget: null
