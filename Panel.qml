@@ -21,6 +21,7 @@ Panel {
   property bool privacyMenuOpen: false
   property int notifiedEvent: 0
   property var expandedAccounts: ({})
+  property bool forcePreviewLayoutCheck: true
   readonly property string lang: Model.localeCode(languageSource, Qt.locale().name, snapshot.thunderbirdLanguage)
   readonly property int unreadCount: Number(snapshot.unreadTotal || 0)
   readonly property string tooltip: unreadCount > 0 ? unreadCount + " " + Model.text(lang, "unread") : Model.text(lang, "noUnread")
@@ -225,7 +226,7 @@ Panel {
             }
 
             Repeater {
-              model: root.accountExpanded(modelData, index) ? (modelData.messages || []) : []
+              model: (root.forcePreviewLayoutCheck || root.accountExpanded(modelData, index)) ? (modelData.messages || []) : []
               delegate: Rectangle {
                 id: mailRow
                 required property var modelData
@@ -238,10 +239,8 @@ Panel {
                   anchors.fill: parent
                   anchors.leftMargin: Style.space(8)
                   anchors.rightMargin: Style.space(8)
-                  Text { id: initials; text: Model.initials(modelData.author); color: Color.accent; font.family: root.bar.fontFamily; font.pixelSize: Style.font.title; width: Style.space(20); anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter }
                   Column {
-                    anchors.left: initials.right
-                    anchors.leftMargin: Style.space(8)
+                    anchors.left: parent.left
                     anchors.right: replyButton.left
                     anchors.rightMargin: Style.space(8)
                     anchors.verticalCenter: parent.verticalCenter
@@ -251,7 +250,7 @@ Panel {
                   }
                   Text {
                     id: replyButton
-                    text: "[↩] [⌫] [!]"
+                    text: "[↩] [⌫] [!] TEST"
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     color: Color.accent
