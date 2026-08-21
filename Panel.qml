@@ -108,6 +108,7 @@ Panel {
         Item {
           width: parent.width
           height: Math.max(titleText.implicitHeight, controls.height)
+          z: root.languageMenuOpen || root.privacyMenuOpen ? 100 : 0
           Text {
             id: titleText
             text: root.tr("title")
@@ -137,7 +138,7 @@ Panel {
               Text { text: ""; color: Color.accent; font.family: root.bar.fontFamily; anchors.right: parent.right; anchors.rightMargin: Style.space(7); anchors.verticalCenter: parent.verticalCenter }
               MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.languageMenuOpen = !root.languageMenuOpen; root.privacyMenuOpen = false } }
               Rectangle {
-                visible: root.languageMenuOpen; z: 10; anchors.top: parent.bottom; anchors.topMargin: Style.space(4); width: parent.width; height: languageChoices.implicitHeight + Style.space(6); radius: Style.cornerRadius; color: root.bar.background; border.color: Color.accent; border.width: 1
+                visible: root.languageMenuOpen; z: 10; anchors.top: parent.bottom; anchors.topMargin: Style.space(4); width: parent.width; height: languageChoices.implicitHeight + Style.space(6); radius: Style.cornerRadius; color: Color.background; border.color: Color.accent; border.width: 1
                 Column {
                   id: languageChoices
                   anchors.left: parent.left; anchors.right: parent.right; anchors.margins: Style.space(3)
@@ -163,7 +164,7 @@ Panel {
               Text { text: ""; color: Color.accent; font.family: root.bar.fontFamily; anchors.right: parent.right; anchors.rightMargin: Style.space(7); anchors.verticalCenter: parent.verticalCenter }
               MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.privacyMenuOpen = !root.privacyMenuOpen; root.languageMenuOpen = false } }
               Rectangle {
-                visible: root.privacyMenuOpen; z: 10; anchors.top: parent.bottom; anchors.topMargin: Style.space(4); width: parent.width; height: privacyChoices.implicitHeight + Style.space(6); radius: Style.cornerRadius; color: root.bar.background; border.color: Color.accent; border.width: 1
+                visible: root.privacyMenuOpen; z: 10; anchors.top: parent.bottom; anchors.topMargin: Style.space(4); width: parent.width; height: privacyChoices.implicitHeight + Style.space(6); radius: Style.cornerRadius; color: Color.background; border.color: Color.accent; border.width: 1
                 Column {
                   id: privacyChoices
                   anchors.left: parent.left; anchors.right: parent.right; anchors.margins: Style.space(3)
@@ -221,7 +222,7 @@ Panel {
                 Text { id: expandIcon; text: root.accountExpanded(modelData, index) ? "" : ""; color: root.bar.foreground; font.family: root.bar.fontFamily; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter }
                 Text { id: envelopeIcon; text: "󰇮"; color: Color.accent; font.family: root.bar.fontFamily; anchors.left: expandIcon.right; anchors.leftMargin: Style.space(8); anchors.verticalCenter: parent.verticalCenter }
                 Text { id: badge; width: Math.max(Style.space(26), implicitWidth + Style.space(8)); height: Style.space(20); text: String(modelData.unreadCount || 0); color: Color.accent; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; Rectangle { anchors.fill: parent; z: -1; radius: height / 2; color: "transparent"; border.color: Color.accent; border.width: 1 } }
-                Text { text: (modelData.email || modelData.name) + "  (" + String(modelData.unreadCount || 0) + ")"; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; font.bold: true; anchors.left: envelopeIcon.right; anchors.leftMargin: Style.space(8); anchors.right: badge.left; anchors.rightMargin: Style.space(8); anchors.verticalCenter: parent.verticalCenter; elide: Text.ElideRight }
+                Text { text: modelData.email || modelData.name; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; font.bold: true; anchors.left: envelopeIcon.right; anchors.leftMargin: Style.space(8); anchors.right: badge.left; anchors.rightMargin: Style.space(8); anchors.verticalCenter: parent.verticalCenter; elide: Text.ElideRight }
               }
               MouseArea { id: accountTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.toggleAccount(index) }
             }
@@ -243,32 +244,44 @@ Panel {
                   anchors.rightMargin: Style.space(8)
                   Column {
                     anchors.left: parent.left
-                    anchors.right: replyButton.left
+                    anchors.right: actionButtons.left
                     anchors.rightMargin: Style.space(8)
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: Style.space(1)
                     Text { text: modelData.author || ""; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; elide: Text.ElideRight; width: parent.width }
                     Text { text: (modelData.flagged ? " " : "") + (modelData.hasAttachments ? "󰆉 " : "") + (modelData.subject || ""); color: Qt.darker(root.bar.foreground, 1.35); font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight; width: parent.width }
                   }
-                  Text {
-                    id: replyButton
-                    text: "[↩] [⌫] [!]"
+                  Row {
+                    id: actionButtons
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    color: Color.accent
-                    font.family: root.bar.fontFamily
-                    font.pixelSize: Style.font.body
-                    font.bold: true
                     z: 2
-                    MouseArea {
-                      anchors.fill: parent
-                      hoverEnabled: true
-                      cursorShape: Qt.PointingHandCursor
-                      onClicked: function(mouse) {
-                        var third = width / 3
-                        if (mouse.x < third) root.runAction("reply", mailRow.modelData)
-                        else if (mouse.x < third * 2) root.runAction("delete", mailRow.modelData)
-                        else root.runAction("spam", mailRow.modelData)
+                    spacing: Style.space(5)
+                    Repeater {
+                      model: [
+                        { icon: "↩", action: "reply", tip: root.tr("reply") },
+                        { icon: "⌫", action: "delete", tip: root.tr("delete") },
+                        { icon: "!", action: "spam", tip: root.tr("spam") }
+                      ]
+                      delegate: Rectangle {
+                        required property var modelData
+                        width: Style.space(25)
+                        height: width
+                        radius: Style.cornerRadius
+                        color: actionTap.pressed ? Color.accent : (actionTap.containsMouse ? Qt.darker(Color.accent, 1.45) : Qt.darker(Color.accent, 2.5))
+                        border.color: Color.accent
+                        border.width: 1
+                        scale: actionTap.pressed ? 0.86 : (actionTap.containsMouse ? 1.06 : 1.0)
+                        Behavior on color { ColorAnimation { duration: 120 } }
+                        Behavior on scale { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
+                        Text { anchors.centerIn: parent; text: modelData.icon; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; font.bold: true }
+                        MouseArea {
+                          id: actionTap
+                          anchors.fill: parent
+                          hoverEnabled: true
+                          cursorShape: Qt.PointingHandCursor
+                          onClicked: root.runAction(modelData.action, mailRow.modelData)
+                        }
                       }
                     }
                   }
