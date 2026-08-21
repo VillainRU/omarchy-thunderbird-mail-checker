@@ -18,6 +18,24 @@ Then open Thunderbird → Add-ons and Themes → Extensions → gear menu → **
 
 The popup header contains two selectors: display language follows either the system locale or Thunderbird's UI locale; notification mode is Full (sender + subject for one message) or Private (no sender or subject). New arrivals generate one summary notification; the first connection also summarizes existing unread mail as requested.
 
+## Remove
+
+1. In Thunderbird, open **Add-ons and Themes** and remove **Thunderbird Mail Checker**.
+2. Remove the Omarchy plugin:
+
+   ```bash
+   omarchy plugin disable io.github.villainru.thunderbird-mail-checker
+   omarchy plugin remove io.github.villainru.thunderbird-mail-checker
+   ```
+
+3. Remove only the native-messaging registration created during setup:
+
+   ```bash
+   rm -f ~/.mozilla/native-messaging-hosts/io.github.villainru.thunderbird_mail_checker.json
+   ```
+
+This does not delete any Thunderbird messages or account data.
+
 ## Development
 
 `make xpi` packs the companion add-on. `make check` validates JSON, Python syntax, and runs protocol tests. The native host is standard-library Python 3 and needs no package installation.
