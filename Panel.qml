@@ -171,8 +171,28 @@ Panel {
                   anchors.rightMargin: Style.space(8)
                   spacing: Style.space(8)
                   Text { text: Model.initials(modelData.author); color: Color.accent; font.family: root.bar.fontFamily; font.pixelSize: Style.font.title; width: Style.space(20); anchors.verticalCenter: parent.verticalCenter }
-                  Column { width: parent.width - actionButtons.implicitWidth - Style.space(42); anchors.verticalCenter: parent.verticalCenter; spacing: Style.space(1); Text { text: modelData.author || ""; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; elide: Text.ElideRight; width: parent.width }; Text { text: (modelData.flagged ? " " : "") + (modelData.hasAttachments ? "󰆉 " : "") + (modelData.subject || ""); color: Qt.darker(root.bar.foreground, 1.35); font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight; width: parent.width } }
-                  Row { id: actionButtons; anchors.verticalCenter: parent.verticalCenter; spacing: Style.space(3); Repeater { model: [{icon:"󰏫", action:"reply", tip:root.tr("reply")},{icon:"󰆴",action:"delete",tip:root.tr("delete")},{icon:"󰒃",action:"spam",tip:root.tr("spam")}]; delegate: Rectangle { required property var modelData; width: Style.space(24); height: width; radius: Style.cornerRadius; color: actionTap.containsMouse ? Color.accent : "transparent"; Text { anchors.centerIn: parent; text: modelData.icon; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body }; MouseArea { id: actionTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { root.runAction(modelData.action, parent.parent.parent.parent.modelData); mouse.accepted = true } } } } }
+                  Column {
+                    width: parent.width - actionButtons.implicitWidth - Style.space(42)
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: Style.space(1)
+                    Text { text: modelData.author || ""; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; elide: Text.ElideRight; width: parent.width }
+                    Text { text: (modelData.flagged ? " " : "") + (modelData.hasAttachments ? "󰆉 " : "") + (modelData.subject || ""); color: Qt.darker(root.bar.foreground, 1.35); font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight; width: parent.width }
+                  }
+                  Row {
+                    id: actionButtons
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: Style.space(3)
+                    Repeater {
+                      model: [{icon:"󰏫", action:"reply", tip:root.tr("reply")},{icon:"󰆴",action:"delete",tip:root.tr("delete")},{icon:"󰒃",action:"spam",tip:root.tr("spam")}]
+                      delegate: Rectangle {
+                        required property var modelData
+                        width: Style.space(24); height: width; radius: Style.cornerRadius
+                        color: actionTap.containsMouse ? Color.accent : "transparent"
+                        Text { anchors.centerIn: parent; text: modelData.icon; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body }
+                        MouseArea { id: actionTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.runAction(modelData.action, parent.parent.parent.parent.modelData) }
+                      }
+                    }
+                  }
                 }
                 MouseArea { id: mailTap; anchors.fill: parent; z: -1; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.runAction("open", modelData) }
               }
