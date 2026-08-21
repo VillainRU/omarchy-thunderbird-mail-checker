@@ -1,0 +1,23 @@
+# Thunderbird Mail Checker
+
+An Omarchy QuickShell plugin that shows the total number of unread Inbox messages, lists only mailboxes with unread mail, and reveals the five newest unread messages per mailbox. The message controls use Thunderbird's own APIs: reply opens a normal reply composer, delete follows the account's Trash behavior, and spam marks the message as junk then moves it to the account Junk folder when it exists.
+
+## Privacy and security
+
+The plugin has no network backend and never reads Thunderbird passwords, OAuth tokens, or message bodies. Its companion MailExtension sends only the metadata needed by the panel (account label, sender, subject, date, star, attachment flag and internal message id) to a local Unix socket and to a mode-0600 local cache. Thunderbird's extension permission screen is the single authorization point for mailbox access.
+
+## Install
+
+```bash
+omarchy plugin add https://github.com/VillainRU/omarchy-thunderbird-mail-checker.git
+omarchy plugin enable io.github.villainru.thunderbird-mail-checker
+~/.config/omarchy/plugins/io.github.villainru.thunderbird-mail-checker/bin/thunderbird-mail-checker setup
+```
+
+Then open Thunderbird → Add-ons and Themes → Extensions → gear menu → **Install Add-on From File**, and select the `thunderbird/thunderbird-mail-checker.xpi` path printed by `setup`. Accept Thunderbird's listed permissions and restart Thunderbird once. The widget defaults to the right section; move it with `omarchy bar move io.github.villainru.thunderbird-mail-checker --section right` if desired.
+
+The popup header contains two selectors: display language follows either the system locale or Thunderbird's UI locale; notification mode is Full (sender + subject for one message) or Private (no sender or subject). New arrivals generate one summary notification; the first connection also summarizes existing unread mail as requested.
+
+## Development
+
+`make xpi` packs the companion add-on. `make check` validates JSON, Python syntax, and runs protocol tests. The native host is standard-library Python 3 and needs no package installation.

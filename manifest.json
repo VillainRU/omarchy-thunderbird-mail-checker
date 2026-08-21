@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.villainru.thunderbird-mail-checker",
+  "name": "Thunderbird Mail Checker",
+  "version": "0.1.0",
+  "author": "VillainRU",
+  "description": "Unread Thunderbird Inbox mail in the Omarchy QuickShell bar.",
+  "license": "MIT",
+  "kinds": ["bar-widget"],
+  "entryPoints": {"barWidget": "BarWidget.qml"},
+  "barWidget": {
+    "displayName": "Thunderbird Mail Checker",
+    "description": "Unread Inbox mail, previews, and safe Thunderbird actions.",
+    "category": "Info",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}
