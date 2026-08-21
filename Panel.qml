@@ -227,20 +227,23 @@ Panel {
             Repeater {
               model: root.accountExpanded(modelData, index) ? (modelData.messages || []) : []
               delegate: Rectangle {
+                id: mailRow
                 required property var modelData
                 width: parent.width - Style.space(8)
                 x: Style.space(8)
                 height: Style.space(51)
                 radius: Style.cornerRadius
                 color: mailTap.containsMouse ? Style.hoverFillFor(root.bar.foreground, Color.accent) : "transparent"
-                Row {
+                Item {
                   anchors.fill: parent
                   anchors.leftMargin: Style.space(8)
                   anchors.rightMargin: Style.space(8)
-                  spacing: Style.space(8)
-                  Text { text: Model.initials(modelData.author); color: Color.accent; font.family: root.bar.fontFamily; font.pixelSize: Style.font.title; width: Style.space(20); anchors.verticalCenter: parent.verticalCenter }
+                  Text { id: initials; text: Model.initials(modelData.author); color: Color.accent; font.family: root.bar.fontFamily; font.pixelSize: Style.font.title; width: Style.space(20); anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter }
                   Column {
-                    width: parent.width - actionButtons.implicitWidth - Style.space(42)
+                    anchors.left: initials.right
+                    anchors.leftMargin: Style.space(8)
+                    anchors.right: actionButtons.left
+                    anchors.rightMargin: Style.space(8)
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: Style.space(1)
                     Text { text: modelData.author || ""; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; elide: Text.ElideRight; width: parent.width }
@@ -248,6 +251,9 @@ Panel {
                   }
                   Row {
                     id: actionButtons
+                    width: Style.space(84)
+                    height: Style.space(24)
+                    anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: Style.space(3)
                     Repeater {
@@ -257,7 +263,7 @@ Panel {
                         width: Style.space(24); height: width; radius: Style.cornerRadius
                         color: actionTap.containsMouse ? Color.accent : "transparent"
                         Text { anchors.centerIn: parent; text: modelData.icon; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body }
-                        MouseArea { id: actionTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.runAction(modelData.action, parent.parent.parent.parent.modelData) }
+                        MouseArea { id: actionTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.runAction(modelData.action, mailRow.modelData) }
                       }
                     }
                   }
