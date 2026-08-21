@@ -18,7 +18,7 @@ BarWidget {
   readonly property bool opened: panelLoader.item ? panelLoader.item.opened === true : false
   readonly property bool popoutSwitchClosing: panelLoader.item ? panelLoader.item.popoutSwitchClosing === true : false
   readonly property bool hasUnread: panelLoader.item && panelLoader.item.unreadCount > 0
-  implicitWidth: button.implicitWidth + (hasUnread ? unreadLabel.implicitWidth + Style.space(6) : 0)
+  implicitWidth: button.implicitWidth + (hasUnread ? unreadLabel.implicitWidth + Style.space(4) : 0)
   implicitHeight: button.implicitHeight
 
   function open() { if (panelLoader.item) panelLoader.item.open() }
@@ -54,14 +54,13 @@ BarWidget {
   Text {
     id: unreadLabel
     visible: root.hasUnread
-    text: panelLoader.item ? String(panelLoader.item.unreadCount) : ""
+    text: panelLoader.item ? "(" + String(panelLoader.item.unreadCount) + ")" : ""
     anchors.left: button.right
     anchors.leftMargin: Style.space(2)
     anchors.verticalCenter: button.verticalCenter
-    anchors.verticalCenterOffset: -Style.space(7)
     color: Color.accent
     font.family: root.bar ? root.bar.fontFamily : "sans-serif"
-    font.pixelSize: Style.font.caption
+    font.pixelSize: Style.font.body
     font.bold: true
   }
 }
