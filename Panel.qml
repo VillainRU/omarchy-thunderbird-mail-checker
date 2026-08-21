@@ -201,6 +201,7 @@ Panel {
         }
 
         Repeater {
+          width: parent.width
           model: root.accounts
           delegate: Column {
             required property var modelData
@@ -226,6 +227,7 @@ Panel {
             }
 
             Repeater {
+              width: parent.width
               model: (root.forcePreviewLayoutCheck || root.accountExpanded(modelData, index)) ? (modelData.messages || []) : []
               delegate: Rectangle {
                 id: mailRow
