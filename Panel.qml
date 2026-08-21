@@ -93,19 +93,35 @@ Panel {
         width: popup.width - popup.padding * 2
         spacing: Style.space(10)
 
-        Row {
+        Item {
           width: parent.width
-          spacing: Style.space(10)
-          Text { text: root.tr("title"); color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.title; font.bold: true; width: parent.width - controls.implicitWidth - Style.space(12); elide: Text.ElideRight }
+          height: Math.max(titleText.implicitHeight, controls.implicitHeight)
+          Text {
+            id: titleText
+            text: root.tr("title")
+            color: root.bar.foreground
+            font.family: root.bar.fontFamily
+            font.pixelSize: Style.font.title
+            font.bold: true
+            anchors.left: parent.left
+            anchors.right: controls.left
+            anchors.rightMargin: Style.space(12)
+            anchors.verticalCenter: parent.verticalCenter
+            elide: Text.ElideRight
+          }
           Row {
             id: controls
             spacing: Style.space(6)
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
             ComboBox {
+              width: Style.space(148)
               model: [root.tr("systemLanguage"), root.tr("thunderbirdLanguage")]
               currentIndex: root.languageSource === "thunderbird" ? 1 : 0
               onActivated: function(index) { root.languageSource = index === 1 ? "thunderbird" : "system" }
             }
             ComboBox {
+              width: Style.space(92)
               model: [root.tr("full"), root.tr("private")]
               currentIndex: root.privacyMode === "private" ? 1 : 0
               onActivated: function(index) { root.privacyMode = index === 1 ? "private" : "full" }
@@ -143,15 +159,14 @@ Panel {
               height: Style.space(34)
               color: accountTap.containsMouse ? Style.hoverFillFor(root.bar.foreground, Color.accent) : "transparent"
               radius: Style.cornerRadius
-              Row {
+              Item {
                 anchors.fill: parent
                 anchors.leftMargin: Style.space(8)
                 anchors.rightMargin: Style.space(8)
-                spacing: Style.space(8)
-                Text { text: modelData.expanded ? "" : ""; color: root.bar.foreground; font.family: root.bar.fontFamily; anchors.verticalCenter: parent.verticalCenter }
-                Text { text: "󰇮"; color: Color.accent; font.family: root.bar.fontFamily; anchors.verticalCenter: parent.verticalCenter }
-                Text { text: modelData.email || modelData.name; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; font.bold: true; width: parent.width - badge.width - Style.space(72); elide: Text.ElideRight; anchors.verticalCenter: parent.verticalCenter }
-                Rectangle { id: badge; width: Math.max(Style.space(26), countText.implicitWidth + Style.space(8)); height: Style.space(20); radius: height / 2; color: "transparent"; border.color: Color.accent; border.width: 1; anchors.verticalCenter: parent.verticalCenter; Text { id: countText; anchors.centerIn: parent; text: String(modelData.unreadCount || 0); color: Color.accent; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; font.bold: true } }
+                Text { id: expandIcon; text: modelData.expanded ? "" : ""; color: root.bar.foreground; font.family: root.bar.fontFamily; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter }
+                Text { id: envelopeIcon; text: "󰇮"; color: Color.accent; font.family: root.bar.fontFamily; anchors.left: expandIcon.right; anchors.leftMargin: Style.space(8); anchors.verticalCenter: parent.verticalCenter }
+                Rectangle { id: badge; width: Math.max(Style.space(26), countText.implicitWidth + Style.space(8)); height: Style.space(20); radius: height / 2; color: "transparent"; border.color: Color.accent; border.width: 1; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; Text { id: countText; anchors.centerIn: parent; text: String(modelData.unreadCount || 0); color: Color.accent; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; font.bold: true } }
+                Text { text: modelData.email || modelData.name; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; font.bold: true; anchors.left: envelopeIcon.right; anchors.leftMargin: Style.space(8); anchors.right: badge.left; anchors.rightMargin: Style.space(8); anchors.verticalCenter: parent.verticalCenter; elide: Text.ElideRight }
               }
               MouseArea { id: accountTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.toggleAccount(index) }
             }
