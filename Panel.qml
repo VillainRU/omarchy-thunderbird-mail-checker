@@ -126,7 +126,20 @@ Panel {
               MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.languageMenuOpen = !root.languageMenuOpen; root.privacyMenuOpen = false } }
               Rectangle {
                 visible: root.languageMenuOpen; z: 10; anchors.top: parent.bottom; anchors.topMargin: Style.space(4); width: parent.width; height: languageChoices.implicitHeight + Style.space(6); radius: Style.cornerRadius; color: root.bar.background; border.color: Color.accent; border.width: 1
-                Column { id: languageChoices; anchors.left: parent.left; anchors.right: parent.right; anchors.margins: Style.space(3); Repeater { model: [{key:"system", label:root.tr("systemLanguage")}, {key:"thunderbird", label:root.tr("thunderbirdLanguage")}]; delegate: Rectangle { required property var modelData; width: parent.width; height: Style.space(28); radius: Style.cornerRadius; color: choiceTap.containsMouse ? Color.accent : "transparent"; Text { anchors.fill: parent; anchors.leftMargin: Style.space(7); verticalAlignment: Text.AlignVCenter; text: modelData.label; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }; MouseArea { id: choiceTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { root.languageSource = modelData.key; root.languageMenuOpen = false } } } } }
+                Column {
+                  id: languageChoices
+                  anchors.left: parent.left; anchors.right: parent.right; anchors.margins: Style.space(3)
+                  Repeater {
+                    model: [{key:"system", label:root.tr("systemLanguage")}, {key:"thunderbird", label:root.tr("thunderbirdLanguage")}]
+                    delegate: Rectangle {
+                      required property var modelData
+                      width: parent.width; height: Style.space(28); radius: Style.cornerRadius
+                      color: choiceTap.containsMouse ? Color.accent : "transparent"
+                      Text { anchors.fill: parent; anchors.leftMargin: Style.space(7); verticalAlignment: Text.AlignVCenter; text: modelData.label; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
+                      MouseArea { id: choiceTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { root.languageSource = modelData.key; root.languageMenuOpen = false } }
+                    }
+                  }
+                }
               }
             }
             Rectangle {
@@ -139,7 +152,20 @@ Panel {
               MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.privacyMenuOpen = !root.privacyMenuOpen; root.languageMenuOpen = false } }
               Rectangle {
                 visible: root.privacyMenuOpen; z: 10; anchors.top: parent.bottom; anchors.topMargin: Style.space(4); width: parent.width; height: privacyChoices.implicitHeight + Style.space(6); radius: Style.cornerRadius; color: root.bar.background; border.color: Color.accent; border.width: 1
-                Column { id: privacyChoices; anchors.left: parent.left; anchors.right: parent.right; anchors.margins: Style.space(3); Repeater { model: [{key:"full", label:root.tr("full")}, {key:"private", label:root.tr("private")}]; delegate: Rectangle { required property var modelData; width: parent.width; height: Style.space(28); radius: Style.cornerRadius; color: privacyTap.containsMouse ? Color.accent : "transparent"; Text { anchors.fill: parent; anchors.leftMargin: Style.space(7); verticalAlignment: Text.AlignVCenter; text: modelData.label; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }; MouseArea { id: privacyTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { root.privacyMode = modelData.key; root.privacyMenuOpen = false } } } } }
+                Column {
+                  id: privacyChoices
+                  anchors.left: parent.left; anchors.right: parent.right; anchors.margins: Style.space(3)
+                  Repeater {
+                    model: [{key:"full", label:root.tr("full")}, {key:"private", label:root.tr("private")}]
+                    delegate: Rectangle {
+                      required property var modelData
+                      width: parent.width; height: Style.space(28); radius: Style.cornerRadius
+                      color: privacyTap.containsMouse ? Color.accent : "transparent"
+                      Text { anchors.fill: parent; anchors.leftMargin: Style.space(7); verticalAlignment: Text.AlignVCenter; text: modelData.label; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
+                      MouseArea { id: privacyTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { root.privacyMode = modelData.key; root.privacyMenuOpen = false } }
+                    }
+                  }
+                }
               }
             }
           }
