@@ -230,6 +230,7 @@ Panel {
               delegate: Rectangle {
                 id: mailRow
                 required property var modelData
+                Component.onCompleted: console.log("mail-preview-layout", width, replyButton.x, replyButton.width, replyButton.visible, replyButton.text)
                 width: parent.width - Style.space(8)
                 x: Style.space(8)
                 height: Style.space(51)
