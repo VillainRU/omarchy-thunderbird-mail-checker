@@ -249,33 +249,33 @@ Panel {
                     Text { text: modelData.author || ""; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; elide: Text.ElideRight; width: parent.width }
                     Text { text: (modelData.flagged ? " " : "") + (modelData.hasAttachments ? "󰆉 " : "") + (modelData.subject || ""); color: Qt.darker(root.bar.foreground, 1.35); font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight; width: parent.width }
                   }
-                }
-                Rectangle {
-                  id: replyButton
-                  width: Style.space(26); height: width; radius: Style.cornerRadius
-                  x: parent.width - width * 3 - Style.space(14); y: (parent.height - height) / 2; z: 2
-                  color: replyTap.containsMouse ? Color.accent : Qt.darker(Color.accent, 2.8)
-                  border.color: Color.accent; border.width: 1
-                  Text { anchors.centerIn: parent; text: "↩"; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; font.bold: true }
-                  MouseArea { id: replyTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.runAction("reply", mailRow.modelData) }
-                }
-                Rectangle {
-                  id: deleteButton
-                  width: replyButton.width; height: width; radius: Style.cornerRadius
-                  x: replyButton.x + width + Style.space(4); y: replyButton.y; z: 2
-                  color: deleteTap.containsMouse ? Color.accent : Qt.darker(Color.accent, 2.8)
-                  border.color: Color.accent; border.width: 1
-                  Text { anchors.centerIn: parent; text: "⌫"; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; font.bold: true }
-                  MouseArea { id: deleteTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.runAction("delete", mailRow.modelData) }
-                }
-                Rectangle {
-                  id: spamButton
-                  width: replyButton.width; height: width; radius: Style.cornerRadius
-                  x: deleteButton.x + width + Style.space(4); y: replyButton.y; z: 2
-                  color: spamTap.containsMouse ? Color.accent : Qt.darker(Color.accent, 2.8)
-                  border.color: Color.accent; border.width: 1
-                  Text { anchors.centerIn: parent; text: "!"; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; font.bold: true }
-                  MouseArea { id: spamTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.runAction("spam", mailRow.modelData) }
+                  Rectangle {
+                    id: replyButton
+                    width: Style.space(26); height: width; radius: Style.cornerRadius
+                    x: parent.width - width * 3 - Style.space(14); y: (parent.height - height) / 2; z: 2
+                    color: replyTap.containsMouse ? Color.accent : Qt.darker(Color.accent, 2.8)
+                    border.color: Color.accent; border.width: 1
+                    Text { anchors.centerIn: parent; text: "↩"; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; font.bold: true }
+                    MouseArea { id: replyTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.runAction("reply", mailRow.modelData) }
+                  }
+                  Rectangle {
+                    id: deleteButton
+                    width: replyButton.width; height: width; radius: Style.cornerRadius
+                    x: replyButton.x + width + Style.space(4); y: replyButton.y; z: 2
+                    color: deleteTap.containsMouse ? Color.accent : Qt.darker(Color.accent, 2.8)
+                    border.color: Color.accent; border.width: 1
+                    Text { anchors.centerIn: parent; text: "⌫"; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; font.bold: true }
+                    MouseArea { id: deleteTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.runAction("delete", mailRow.modelData) }
+                  }
+                  Rectangle {
+                    id: spamButton
+                    width: replyButton.width; height: width; radius: Style.cornerRadius
+                    x: deleteButton.x + width + Style.space(4); y: replyButton.y; z: 2
+                    color: spamTap.containsMouse ? Color.accent : Qt.darker(Color.accent, 2.8)
+                    border.color: Color.accent; border.width: 1
+                    Text { anchors.centerIn: parent; text: "!"; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; font.bold: true }
+                    MouseArea { id: spamTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.runAction("spam", mailRow.modelData) }
+                  }
                 }
                 MouseArea { id: mailTap; anchors.fill: parent; z: -1; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.runAction("open", modelData) }
               }
