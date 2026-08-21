@@ -80,8 +80,9 @@ def command_action(action, message_id):
     payload = {"type": "action", "requestId": secrets.token_hex(12), "action": action, "messageId": int(message_id)}
     try:
         response = request_socket(payload)
-        if response and response.get("ok"):
-            print(json.dumps(response, ensure_ascii=False)); return 0
+        if response:
+            print(json.dumps(response, ensure_ascii=False))
+            return 0 if response.get("ok") else 1
     except OSError:
         pass
     queue_action(payload)

@@ -308,7 +308,17 @@ Panel {
                     }
                   }
                 }
-                MouseArea { id: mailTap; anchors.fill: parent; z: -1; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.runAction("open", modelData) }
+                MouseArea {
+                  id: mailTap
+                  anchors.left: parent.left
+                  anchors.right: actionButtons.left
+                  anchors.top: parent.top
+                  anchors.bottom: parent.bottom
+                  z: 1
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: root.runAction("open", modelData)
+                }
               }
             }
           }
