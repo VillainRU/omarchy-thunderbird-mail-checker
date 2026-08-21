@@ -14,10 +14,12 @@ async function attachmentFlag(id) {
   try { return (await messenger.messages.listAttachments(id)).length > 0; } catch (error) { return false; }
 }
 async function unreadInFolder(folder) {
-  const result = await messenger.messages.query({ folderId: folder.id, read: false, sortType: "date", sortOrder: "descending" });
-  const messages = [...result.messages];
-  let page = result;
-  while (page.id) { page = await messenger.messages.continueList(page.id); messages.push(...page.messages); }
+  const messages = [];
+  let page = await messenger.messages.list(folder.id);
+  while (page) {
+    messages.push(...page.messages.filter(message => !message.read));
+    page = page.id ? await messenger.messages.continueList(page.id) : null;
+  }
   return messages;
 }
 async function snapshot(notification) {
