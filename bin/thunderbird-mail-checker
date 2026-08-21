@@ -154,6 +154,10 @@ def native_host():
                 if message is None: return
                 kind = message.get("type")
                 if kind == "snapshot": atomic_json(STATUS_PATH, message.get("status", {}))
+                elif kind == "error":
+                    status = load_json(STATUS_PATH, fallback_status())
+                    status.update({"connected": True, "setupRequired": False, "lastError": message.get("error", "Unknown extension error")})
+                    atomic_json(STATUS_PATH, status)
                 elif kind == "ready":
                     native_ready = True
                     queued = load_json(QUEUE_PATH, [])

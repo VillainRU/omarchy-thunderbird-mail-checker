@@ -4,6 +4,10 @@ let initialized = false;
 let eventId = 0;
 
 function post(payload) { try { port.postMessage(payload); } catch (error) { console.error(error); } }
+function reportError(error) {
+  console.error(error);
+  post({ type: "error", error: String(error && (error.message || error)) });
+}
 function inboxes(folders, result) {
   for (const folder of folders || []) {
     if (folder.type === "inbox") result.push(folder);
@@ -69,7 +73,12 @@ async function perform(request) {
 function connect() {
   port = messenger.runtime.connectNative(HOST);
   port.onMessage.addListener(async request => {
-    if (request.type === "ready") { await snapshot(initialized ? null : { eventId: ++eventId, initial: true }); initialized = true; return; }
+    if (request.type === "ready") {
+      try { await snapshot(initialized ? null : { eventId: ++eventId, initial: true }); }
+      catch (error) { reportError(error); }
+      initialized = true;
+      return;
+    }
     if (request.type !== "action") return;
     try { await perform(request); await snapshot(null); post({ type: "action-result", requestId: request.requestId, ok: true }); }
     catch (error) { post({ type: "action-result", requestId: request.requestId, ok: false, error: String(error.message || error) }); }
@@ -80,7 +89,8 @@ function connect() {
 messenger.messages.onNewMailReceived.addListener(async (folder, messages) => {
   if (folder.type !== "inbox") return;
   const first = messages.messages && messages.messages[0];
-  await snapshot({ eventId: ++eventId, count: (messages.messages || []).length, first: first ? { author: first.author, subject: first.subject } : null });
+  try { await snapshot({ eventId: ++eventId, count: (messages.messages || []).length, first: first ? { author: first.author, subject: first.subject } : null }); }
+  catch (error) { reportError(error); }
 }, false);
-setInterval(() => snapshot(null).catch(console.error), 60000);
+setInterval(() => snapshot(null).catch(reportError), 60000);
 connect();
