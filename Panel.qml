@@ -57,10 +57,18 @@ Panel {
     actionProc.running = true
   }
   function toggleAccount(index) {
-    var copy = accounts.slice()
-    if (!copy[index]) return
-    copy[index].expanded = !copy[index].expanded
-    snapshot.accounts = copy
+    var updatedAccounts = accounts.slice()
+    if (!updatedAccounts[index]) return
+
+    var updatedAccount = {}
+    for (var accountKey in updatedAccounts[index]) updatedAccount[accountKey] = updatedAccounts[index][accountKey]
+    updatedAccount.expanded = !Boolean(updatedAccount.expanded)
+    updatedAccounts[index] = updatedAccount
+
+    var updatedSnapshot = {}
+    for (var snapshotKey in snapshot) updatedSnapshot[snapshotKey] = snapshot[snapshotKey]
+    updatedSnapshot.accounts = updatedAccounts
+    snapshot = updatedSnapshot
   }
 
   Timer { interval: 60000; running: true; repeat: true; triggeredOnStart: true; onTriggered: root.refresh() }

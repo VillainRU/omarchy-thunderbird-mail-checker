@@ -17,7 +17,8 @@ BarWidget {
 
   readonly property bool opened: panelLoader.item ? panelLoader.item.opened === true : false
   readonly property bool popoutSwitchClosing: panelLoader.item ? panelLoader.item.popoutSwitchClosing === true : false
-  implicitWidth: button.implicitWidth
+  readonly property bool hasUnread: panelLoader.item && panelLoader.item.unreadCount > 0
+  implicitWidth: button.implicitWidth + (hasUnread ? unreadLabel.implicitWidth + Style.space(6) : 0)
   implicitHeight: button.implicitHeight
 
   function open() { if (panelLoader.item) panelLoader.item.open() }
@@ -37,28 +38,30 @@ BarWidget {
 
   BarIconButton {
     id: button
-    anchors.fill: parent
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
     bar: root.bar
     text: "󰇮"
     slotSize: Style.bar.statusSlot
     tooltipText: panelLoader.item ? panelLoader.item.tooltip : "Thunderbird Mail Checker"
 
-    Text {
-      visible: panelLoader.item && panelLoader.item.unreadCount > 0
-      text: panelLoader.item ? String(panelLoader.item.unreadCount) : ""
-      anchors.left: parent.horizontalCenter
-      anchors.leftMargin: Style.space(5)
-      anchors.verticalCenter: parent.verticalCenter
-      anchors.verticalCenterOffset: -Style.space(7)
-      color: Color.accent
-      font.family: root.bar ? root.bar.fontFamily : "sans-serif"
-      font.pixelSize: Style.font.caption
-      font.bold: true
-    }
-
     onPressed: function(button) {
       if (button === Qt.LeftButton && panelLoader.item) panelLoader.item.toggle()
       else if (button === Qt.MiddleButton && panelLoader.item) panelLoader.item.refresh()
     }
+  }
+
+  Text {
+    id: unreadLabel
+    visible: root.hasUnread
+    text: panelLoader.item ? String(panelLoader.item.unreadCount) : ""
+    anchors.left: button.right
+    anchors.leftMargin: Style.space(2)
+    anchors.verticalCenter: button.verticalCenter
+    anchors.verticalCenterOffset: -Style.space(7)
+    color: Color.accent
+    font.family: root.bar ? root.bar.fontFamily : "sans-serif"
+    font.pixelSize: Style.font.caption
+    font.bold: true
   }
 }
