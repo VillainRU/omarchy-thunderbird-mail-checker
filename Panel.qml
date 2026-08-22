@@ -285,25 +285,20 @@ Panel {
                         { icon: "⌫", action: "delete", tip: root.tr("delete") },
                         { icon: "!", action: "spam", tip: root.tr("spam") }
                       ]
-                      delegate: Rectangle {
+                      delegate: Button {
                         required property var modelData
                         width: Style.space(25)
                         height: width
-                        radius: Style.cornerRadius
-                        color: actionTap.pressed ? Color.accent : (actionTap.containsMouse ? Qt.darker(Color.accent, 1.45) : Qt.darker(Color.accent, 2.5))
-                        border.color: Color.accent
-                        border.width: 1
-                        scale: actionTap.pressed ? 0.86 : (actionTap.containsMouse ? 1.06 : 1.0)
-                        Behavior on color { ColorAnimation { duration: 120 } }
-                        Behavior on scale { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
-                        Text { anchors.centerIn: parent; text: modelData.icon; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; font.bold: true }
-                        MouseArea {
-                          id: actionTap
-                          anchors.fill: parent
-                          hoverEnabled: true
-                          cursorShape: Qt.PointingHandCursor
-                          onClicked: root.runAction(modelData.action, mailRow.modelData)
-                        }
+                        iconText: modelData.icon
+                        tooltipText: modelData.tip
+                        foreground: root.bar.foreground
+                        accent: Color.accent
+                        fontFamily: root.bar.fontFamily
+                        iconSize: Style.font.body
+                        horizontalPadding: 0
+                        verticalPadding: 0
+                        bordered: true
+                        onClicked: root.runAction(modelData.action, mailRow.modelData)
                       }
                     }
                   }
