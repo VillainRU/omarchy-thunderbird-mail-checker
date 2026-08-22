@@ -18,6 +18,10 @@ Then open Thunderbird → Add-ons and Themes → Extensions → gear menu → **
 
 The popup header contains two selectors: display language follows either the system locale or Thunderbird's UI locale; notification mode is Full (sender + subject for one message) or Private (no sender or subject). New arrivals generate one summary notification; the first connection also summarizes existing unread mail as requested.
 
+## Updates
+
+Published changes are listed in [CHANGELOG.md](CHANGELOG.md). The plugin version and companion MailExtension version are maintained separately; the current versions are shown in the root `manifest.json` and the packaged `thunderbird/thunderbird-mail-checker.xpi` respectively.
+
 ## Remove
 
 1. In Thunderbird, open **Add-ons and Themes** and remove **Thunderbird Mail Checker**.
