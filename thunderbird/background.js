@@ -43,7 +43,8 @@ async function snapshot(notification) {
     visible.push({ accountId: account.id, name: account.name, email: identity ? identity.email : account.name, unreadCount: unread.length, messages: preview, expanded: false });
     total += unread.length;
   }
-  visible.sort((a, b) => b.unreadCount - a.unreadCount || a.email.localeCompare(b.email));
+  // Keep Thunderbird's account order. Sorting by the changing unread count made
+  // expanded mailboxes jump when a message was deleted or marked as read.
   if (notification && notification.initial) {
     notification.count = total;
     notification.first = visible.length && visible[0].messages.length ? visible[0].messages[0] : null;

@@ -11,6 +11,7 @@ xpi:
 check:
 	python -m json.tool manifest.json >/dev/null
 	python -m json.tool thunderbird/manifest.webextension.json >/dev/null
+	node --check thunderbird/background.js
 	python -m py_compile bin/thunderbird-mail-checker
 	bash -n bin/native-host tests/protocol-test.sh
 	./tests/protocol-test.sh
