@@ -2,6 +2,12 @@
 
 All notable changes to Thunderbird Mail Checker are documented here.
 
+## [0.1.9] - Unreleased
+
+### Fixed
+
+- The restart control can replace an already running bridge from a version that predates the restart command.
+
 ## [0.1.8] - Unreleased
 
 ### Added
