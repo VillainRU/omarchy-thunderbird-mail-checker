@@ -2,6 +2,12 @@
 
 All notable changes to Thunderbird Mail Checker are documented here.
 
+## [0.1.12] - Unreleased
+
+### Changed
+
+- Widened the panel so the title and header controls do not overlap.
+
 ## [0.1.11] - Unreleased
 
 ### Fixed

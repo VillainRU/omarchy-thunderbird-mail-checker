@@ -121,7 +121,7 @@ Panel {
     owner: root.barIdentity
     bar: root.bar
     open: root.opened
-    contentWidth: popup.fittedContentWidth(Style.space(510))
+    contentWidth: popup.fittedContentWidth(Style.space(570))
     contentHeight: popup.fittedContentHeight(content.implicitHeight, Style.space(620))
 
     Flickable {
