@@ -157,7 +157,7 @@ Panel {
           }
           Row {
             id: controls
-            width: Style.space(276)
+            width: Style.space(282)
             height: Style.space(30)
             spacing: Style.space(6)
             anchors.right: parent.right

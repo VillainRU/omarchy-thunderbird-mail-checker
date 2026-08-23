@@ -2,6 +2,12 @@
 
 All notable changes to Thunderbird Mail Checker are documented here.
 
+## [0.1.11] - Unreleased
+
+### Fixed
+
+- Kept the notification-mode selector within the panel by matching the header control container width to its contents.
+
 ## [0.1.10] - Unreleased
 
 ### Fixed
