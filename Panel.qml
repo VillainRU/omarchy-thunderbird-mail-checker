@@ -27,6 +27,7 @@ Panel {
   readonly property var accounts: snapshot.accounts || []
   readonly property bool bridgeActive: snapshot.connected === true
   readonly property color bridgeColor: bridgeActive ? "#6dca76" : Color.urgent
+  readonly property string titleMarkup: root.tr("title").replace("Thunderbird", "<span style=\"color:" + root.bridgeColor + "\">Thunderbird</span>")
   readonly property string helper: Quickshell.env("HOME") + "/.config/omarchy/plugins/io.github.villainru.thunderbird-mail-checker/bin/thunderbird-mail-checker"
 
   function tr(key) { return Model.text(lang, key) }
@@ -140,64 +141,42 @@ Panel {
           width: parent.width
           height: Math.max(titleText.implicitHeight, controls.height)
           z: root.languageMenuOpen || root.privacyMenuOpen ? 100 : 0
-          Item {
+          Text {
             id: titleText
+            text: root.titleMarkup
+            textFormat: Text.RichText
+            color: root.bar.foreground
+            font.family: root.bar.fontFamily
+            font.pixelSize: Style.font.title
+            font.bold: true
             anchors.left: parent.left
             anchors.right: controls.left
             anchors.rightMargin: Style.space(12)
             anchors.verticalCenter: parent.verticalCenter
-            height: titleRow.implicitHeight
-            clip: true
-            Row {
-              id: titleRow
-              anchors.left: parent.left
-              anchors.verticalCenter: parent.verticalCenter
-              spacing: Style.space(3)
-              Text {
-                text: root.tr("titleBefore")
-                color: root.bar.foreground
-                font.family: root.bar.fontFamily
-                font.pixelSize: Style.font.title
-                font.bold: true
-              }
-              Text {
-                text: root.tr("titleThunderbird")
-                color: root.bridgeColor
-                font.family: root.bar.fontFamily
-                font.pixelSize: Style.font.title
-                font.bold: true
-              }
-              Button {
-                width: Style.space(24)
-                height: width
-                iconText: "↻"
-                tooltipText: root.tr("restartBridge")
-                foreground: root.bridgeColor
-                accent: root.bridgeColor
-                fontFamily: root.bar.fontFamily
-                iconSize: Style.font.body
-                iconSpinning: restartProc.running
-                horizontalPadding: 0
-                verticalPadding: 0
-                bordered: true
-                onClicked: root.restartBridge()
-              }
-              Text {
-                text: root.tr("titleAfter")
-                color: root.bar.foreground
-                font.family: root.bar.fontFamily
-                font.pixelSize: Style.font.title
-                font.bold: true
-              }
-            }
+            elide: Text.ElideRight
           }
           Row {
             id: controls
-            width: Style.space(246)
+            width: Style.space(276)
             height: Style.space(30)
             spacing: Style.space(6)
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
+            Button {
+              width: Style.space(30)
+              height: width
+              iconText: "⟳"
+              tooltipText: root.tr("restartBridge")
+              foreground: root.bridgeColor
+              accent: root.bridgeColor
+              fontFamily: root.bar.fontFamily
+              iconSize: Style.font.caption
+              iconSpinning: restartProc.running
+              horizontalPadding: 0
+              verticalPadding: 0
+              bordered: true
+              onClicked: root.restartBridge()
+            }
             Rectangle {
               id: languageSelector
               width: Style.space(148)

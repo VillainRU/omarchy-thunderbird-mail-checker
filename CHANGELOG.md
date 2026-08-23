@@ -2,6 +2,16 @@
 
 All notable changes to Thunderbird Mail Checker are documented here.
 
+## [0.1.10] - Unreleased
+
+### Fixed
+
+- Replaced split title translation fragments with one title so translation keys can never appear in the panel.
+
+### Changed
+
+- Moved the bridge restart control before the language selector and simplified its icon.
+
 ## [0.1.9] - Unreleased
 
 ### Fixed
