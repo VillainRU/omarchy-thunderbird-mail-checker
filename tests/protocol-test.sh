@@ -64,9 +64,13 @@ try:
     assert request["messageId"] == 123
     send({"type": "action-result", "requestId": request["requestId"], "ok": True})
     assert json.loads(action.communicate(timeout=3)[0])["ok"] is True
-finally:
-    host.terminate()
+    restart = json.loads(subprocess.check_output([helper, "restart"], text=True))
+    assert restart["ok"] is True
     host.wait(timeout=3)
+finally:
+    if host.poll() is None:
+        host.terminate()
+        host.wait(timeout=3)
 PY
 
 echo "native host socket: ok"

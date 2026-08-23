@@ -118,6 +118,16 @@ def command_action(action, message_id):
         pass
     print(json.dumps({"ok": False, "error": "Thunderbird bridge is unavailable"}, ensure_ascii=False)); return 1
 
+def command_restart():
+    try:
+        response = request_socket({"type": "restart"})
+        if response:
+            print(json.dumps(response, ensure_ascii=False))
+            return 0 if response.get("ok") else 1
+    except OSError:
+        pass
+    print(json.dumps({"ok": False, "error": "Thunderbird bridge is unavailable"}, ensure_ascii=False)); return 1
+
 def read_native(stream):
     header = stream.read(4)
     if len(header) != 4: return None
@@ -167,6 +177,13 @@ def native_host():
                 request = json.loads(raw.decode()) if raw else {}
                 if request.get("type") == "status":
                     client.sendall((json.dumps({"ok": True, "status": load_json(STATUS_PATH, fallback_status())}, ensure_ascii=False) + "\n").encode()); client.close()
+                elif request.get("type") == "restart":
+                    client.sendall(b'{"ok":true}\n'); client.close(); server.close()
+                    try: SOCKET_PATH.unlink()
+                    except FileNotFoundError: pass
+                    # The native-messaging reader blocks on Thunderbird's stdin.
+                    # Exit directly so it cannot keep Python alive during a deliberate restart.
+                    os._exit(0)
                 elif request.get("type") == "action":
                     if native_ready:
                         pending[request["requestId"]] = client
@@ -211,12 +228,13 @@ def command_setup():
 def main():
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("status"); sub.add_parser("setup"); sub.add_parser("native-host")
+    sub.add_parser("status"); sub.add_parser("setup"); sub.add_parser("native-host"); sub.add_parser("restart")
     action = sub.add_parser("action"); action.add_argument("action"); action.add_argument("message_id")
     args = parser.parse_args()
     if args.command == "status": return command_status()
     if args.command == "setup": command_setup(); return 0
     if args.command == "native-host": native_host(); return 0
+    if args.command == "restart": return command_restart()
     return command_action(args.action, args.message_id)
 
 if __name__ == "__main__": raise SystemExit(main())

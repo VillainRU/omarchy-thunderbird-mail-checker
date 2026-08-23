@@ -2,6 +2,12 @@
 
 All notable changes to Thunderbird Mail Checker are documented here.
 
+## [0.1.8] - Unreleased
+
+### Added
+
+- A green/red bridge-status indicator on the `Thunderbird` title and a restart button for the local Thunderbird bridge.
+
 ## [0.1.7] - 2026-08-22
 
 ### Fixed

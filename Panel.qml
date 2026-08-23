@@ -25,6 +25,8 @@ Panel {
   readonly property int unreadCount: Number(snapshot.unreadTotal || 0)
   readonly property string tooltip: unreadCount > 0 ? unreadCount + " " + Model.text(lang, "unread") : Model.text(lang, "noUnread")
   readonly property var accounts: snapshot.accounts || []
+  readonly property bool bridgeActive: snapshot.connected === true
+  readonly property color bridgeColor: bridgeActive ? "#6dca76" : Color.urgent
   readonly property string helper: Quickshell.env("HOME") + "/.config/omarchy/plugins/io.github.villainru.thunderbird-mail-checker/bin/thunderbird-mail-checker"
 
   function tr(key) { return Model.text(lang, key) }
@@ -55,6 +57,11 @@ Panel {
   function toggle() { opened ? close() : open() }
   function closeForPopoutSwitch() { root.close() }
   function refresh() { if (!statusProc.running) statusProc.running = true }
+  function restartBridge() {
+    if (restartProc.running) return
+    restartProc.command = [helper, "restart"]
+    restartProc.running = true
+  }
   function applySnapshot(raw) {
     var parsed = Model.safeJson(raw, null)
     if (!parsed || typeof parsed !== "object") return
@@ -103,7 +110,9 @@ Panel {
     onExited: function(exitCode) { if (exitCode === 0) root.applySnapshot(statusOut.text) }
   }
   Process { id: actionProc; onExited: root.refresh() }
+  Process { id: restartProc; onExited: bridgeRefreshTimer.restart() }
   Process { id: notificationProc }
+  Timer { id: bridgeRefreshTimer; interval: 5500; repeat: false; onTriggered: root.refresh() }
 
   KeyboardPanel {
     id: popup
@@ -131,18 +140,56 @@ Panel {
           width: parent.width
           height: Math.max(titleText.implicitHeight, controls.height)
           z: root.languageMenuOpen || root.privacyMenuOpen ? 100 : 0
-          Text {
+          Item {
             id: titleText
-            text: root.tr("title")
-            color: root.bar.foreground
-            font.family: root.bar.fontFamily
-            font.pixelSize: Style.font.title
-            font.bold: true
             anchors.left: parent.left
             anchors.right: controls.left
             anchors.rightMargin: Style.space(12)
             anchors.verticalCenter: parent.verticalCenter
-            elide: Text.ElideRight
+            height: titleRow.implicitHeight
+            clip: true
+            Row {
+              id: titleRow
+              anchors.left: parent.left
+              anchors.verticalCenter: parent.verticalCenter
+              spacing: Style.space(3)
+              Text {
+                text: root.tr("titleBefore")
+                color: root.bar.foreground
+                font.family: root.bar.fontFamily
+                font.pixelSize: Style.font.title
+                font.bold: true
+              }
+              Text {
+                text: root.tr("titleThunderbird")
+                color: root.bridgeColor
+                font.family: root.bar.fontFamily
+                font.pixelSize: Style.font.title
+                font.bold: true
+              }
+              Button {
+                width: Style.space(24)
+                height: width
+                iconText: "↻"
+                tooltipText: root.tr("restartBridge")
+                foreground: root.bridgeColor
+                accent: root.bridgeColor
+                fontFamily: root.bar.fontFamily
+                iconSize: Style.font.body
+                iconSpinning: restartProc.running
+                horizontalPadding: 0
+                verticalPadding: 0
+                bordered: true
+                onClicked: root.restartBridge()
+              }
+              Text {
+                text: root.tr("titleAfter")
+                color: root.bar.foreground
+                font.family: root.bar.fontFamily
+                font.pixelSize: Style.font.title
+                font.bold: true
+              }
+            }
           }
           Row {
             id: controls
