@@ -2,6 +2,12 @@
 
 All notable changes to Thunderbird Mail Checker are documented here.
 
+## [0.1.14] - Unreleased
+
+### Changed
+
+- Keep a fixed minimum panel height for short or empty mail lists, so opening a selector no longer resizes the window.
+
 ## [0.1.13] - Unreleased
 
 ### Fixed
