@@ -2,6 +2,12 @@
 
 All notable changes to Thunderbird Mail Checker are documented here.
 
+## [0.1.15] - Unreleased
+
+### Fixed
+
+- Keep the header aligned to the top while selector menus use the panel's reserved space below it.
+
 ## [0.1.14] - Unreleased
 
 ### Changed
