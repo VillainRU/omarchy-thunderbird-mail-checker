@@ -140,6 +140,7 @@ Panel {
         Item {
           width: parent.width
           height: Math.max(titleText.implicitHeight, controls.height)
+            + (root.languageMenuOpen || root.privacyMenuOpen ? Style.space(66) : 0)
           z: root.languageMenuOpen || root.privacyMenuOpen ? 100 : 0
           Text {
             id: titleText

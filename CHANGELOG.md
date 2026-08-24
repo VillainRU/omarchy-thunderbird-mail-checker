@@ -2,6 +2,12 @@
 
 All notable changes to Thunderbird Mail Checker are documented here.
 
+## [0.1.13] - Unreleased
+
+### Fixed
+
+- Keep an opened language or notification-mode menu inside the panel when no unread messages are listed.
+
 ## [0.1.12] - Unreleased
 
 ### Changed
