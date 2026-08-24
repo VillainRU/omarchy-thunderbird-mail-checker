@@ -2,6 +2,12 @@
 
 All notable changes to Thunderbird Mail Checker are documented here.
 
+## [0.1.16] - Unreleased
+
+### Fixed
+
+- Keep every opened selector option inside the Flickable hit area so the Thunderbird-language option is clickable.
+
 ## [0.1.15] - Unreleased
 
 ### Fixed

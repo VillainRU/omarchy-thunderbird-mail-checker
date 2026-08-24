@@ -30,6 +30,7 @@ Panel {
   readonly property string titleMarkup: root.tr("title").replace("Thunderbird", "<span style=\"color:" + root.bridgeColor + "\">Thunderbird</span>")
   readonly property string helper: Quickshell.env("HOME") + "/.config/omarchy/plugins/io.github.villainru.thunderbird-mail-checker/bin/thunderbird-mail-checker"
   readonly property int minimumPopupHeight: Style.space(160)
+  readonly property int openSelectorHeight: languageMenuOpen || privacyMenuOpen ? Style.space(66) : 0
 
   function tr(key) { return Model.text(lang, key) }
   function persistSettings(values) {
@@ -123,13 +124,13 @@ Panel {
     bar: root.bar
     open: root.opened
     contentWidth: popup.fittedContentWidth(Style.space(570))
-    contentHeight: popup.fittedContentHeight(Math.max(content.implicitHeight, root.minimumPopupHeight), Style.space(620))
+    contentHeight: popup.fittedContentHeight(Math.max(content.implicitHeight + root.openSelectorHeight, root.minimumPopupHeight), Style.space(620))
 
     Flickable {
       id: mailScroll
       anchors.fill: parent
       contentWidth: width
-      contentHeight: content.implicitHeight
+      contentHeight: content.implicitHeight + root.openSelectorHeight
       clip: true
       boundsBehavior: Flickable.StopAtBounds
 
