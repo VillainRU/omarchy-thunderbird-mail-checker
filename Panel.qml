@@ -17,8 +17,6 @@ Panel {
   property var snapshot: ({ accounts: [], unreadTotal: 0 })
   property string languageSource: String(setting("languageSource", "system"))
   property string privacyMode: String(setting("privacyMode", "full"))
-  property bool languageMenuOpen: false
-  property bool privacyMenuOpen: false
   property int notifiedEvent: 0
   property var expandedAccounts: ({})
   readonly property string lang: Model.localeCode(languageSource, Qt.locale().name, snapshot.thunderbirdLanguage)
@@ -27,10 +25,8 @@ Panel {
   readonly property var accounts: snapshot.accounts || []
   readonly property bool bridgeActive: snapshot.connected === true
   readonly property color bridgeColor: bridgeActive ? "#6dca76" : Color.urgent
-  readonly property string titleMarkup: root.tr("title").replace("Thunderbird", "<span style=\"color:" + root.bridgeColor + "\">Thunderbird</span>")
   readonly property string helper: Quickshell.env("HOME") + "/.config/omarchy/plugins/io.github.villainru.thunderbird-mail-checker/bin/thunderbird-mail-checker"
   readonly property int minimumPopupHeight: Style.space(160)
-  readonly property int openSelectorHeight: languageMenuOpen || privacyMenuOpen ? Style.space(66) : 0
 
   function tr(key) { return Model.text(lang, key) }
   function persistSettings(values) {
@@ -45,14 +41,10 @@ Panel {
   }
   function chooseLanguage(source) {
     languageSource = source
-    languageMenuOpen = false
-    privacyMenuOpen = false
     persistSettings({ languageSource: source })
   }
   function choosePrivacyMode(mode) {
     privacyMode = mode
-    languageMenuOpen = false
-    privacyMenuOpen = false
     persistSettings({ privacyMode: mode })
   }
   function open() { controller.show(); refresh() }
@@ -124,13 +116,13 @@ Panel {
     bar: root.bar
     open: root.opened
     contentWidth: popup.fittedContentWidth(Style.space(570))
-    contentHeight: popup.fittedContentHeight(Math.max(content.implicitHeight + root.openSelectorHeight, root.minimumPopupHeight), Style.space(620))
+    contentHeight: popup.fittedContentHeight(Math.max(content.implicitHeight, root.minimumPopupHeight), Style.space(620))
 
     Flickable {
       id: mailScroll
       anchors.fill: parent
       contentWidth: width
-      contentHeight: content.implicitHeight + root.openSelectorHeight
+      contentHeight: content.implicitHeight
       clip: true
       boundsBehavior: Flickable.StopAtBounds
 
@@ -141,97 +133,112 @@ Panel {
 
         Item {
           width: parent.width
-          height: Math.max(titleText.implicitHeight, controls.height)
-          z: root.languageMenuOpen || root.privacyMenuOpen ? 100 : 0
-          Text {
-            id: titleText
-            text: root.titleMarkup
-            textFormat: Text.RichText
-            color: root.bar.foreground
-            font.family: root.bar.fontFamily
-            font.pixelSize: Style.font.title
-            font.bold: true
+          height: Math.max(identityRow.implicitHeight, controls.implicitHeight)
+
+          Row {
+            id: identityRow
             anchors.left: parent.left
             anchors.right: controls.left
-            anchors.rightMargin: Style.space(12)
+            anchors.rightMargin: Style.space(8)
             anchors.verticalCenter: parent.verticalCenter
-            elide: Text.ElideRight
+            spacing: Style.space(5)
+
+            Button {
+              id: bridgeButton
+              width: Style.space(30)
+              height: width
+              iconText: "󰇮"
+              tooltipText: root.tr("restartBridge")
+              foreground: Color.accent
+              accent: Color.accent
+              fontFamily: root.bar.fontFamily
+              iconSize: Style.font.body
+              horizontalPadding: 0
+              verticalPadding: 0
+              bordered: false
+              onClicked: root.restartBridge()
+
+              Text {
+                text: "↻"
+                color: Color.accent
+                font.family: root.bar.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                anchors.right: parent.right
+                anchors.rightMargin: Style.space(1)
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: Style.space(1)
+
+                NumberAnimation on rotation {
+                  running: restartProc.running
+                  from: 0
+                  to: 360
+                  duration: 900
+                  loops: Animation.Infinite
+                }
+
+                onRotationChanged: if (!restartProc.running && rotation !== 0) rotation = 0
+              }
+            }
+
+            Text {
+              text: "Thunderbird"
+              textFormat: Text.PlainText
+              color: root.bridgeColor
+              font.family: root.bar.fontFamily
+              font.pixelSize: Style.font.title
+              font.bold: true
+              anchors.verticalCenter: parent.verticalCenter
+              elide: Text.ElideRight
+              width: Math.min(implicitWidth, identityRow.width - bridgeButton.width - identityRow.spacing)
+            }
           }
+
           Row {
             id: controls
-            width: Style.space(282)
-            height: Style.space(30)
             spacing: Style.space(6)
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            Button {
-              width: Style.space(30)
-              height: width
-              iconText: "⟳"
-              tooltipText: root.tr("restartBridge")
-              foreground: root.bridgeColor
-              accent: root.bridgeColor
+
+            ButtonGroup {
+              id: languageToggle
+              options: [
+                { value: "system", label: "Sys" },
+                { value: "thunderbird", label: "Client" }
+              ]
+              value: root.languageSource
+              foreground: root.bar.foreground
+              background: "transparent"
+              accent: Color.accent
               fontFamily: root.bar.fontFamily
-              iconSize: Style.font.caption
-              iconSpinning: restartProc.running
-              horizontalPadding: 0
-              verticalPadding: 0
-              bordered: true
-              onClicked: root.restartBridge()
+              fontSize: Style.font.caption
+              focusable: false
+              spacing: Style.space(2)
+              onChanged: function(value) { root.chooseLanguage(value) }
             }
-            Rectangle {
-              id: languageSelector
-              width: Style.space(148)
-              height: Style.space(30)
-              radius: Style.cornerRadius; color: "transparent"; border.color: Color.accent; border.width: 1
-              Text { anchors.left: parent.left; anchors.right: parent.right; anchors.leftMargin: Style.space(8); anchors.rightMargin: Style.space(20); anchors.verticalCenter: parent.verticalCenter; text: root.languageSource === "thunderbird" ? root.tr("thunderbirdLanguage") : root.tr("systemLanguage"); color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
-              Text { text: ""; color: Color.accent; font.family: root.bar.fontFamily; anchors.right: parent.right; anchors.rightMargin: Style.space(7); anchors.verticalCenter: parent.verticalCenter }
-              MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.languageMenuOpen = !root.languageMenuOpen; root.privacyMenuOpen = false } }
-              Rectangle {
-                visible: root.languageMenuOpen; z: 10; anchors.top: parent.bottom; anchors.topMargin: Style.space(4); width: parent.width; height: languageChoices.implicitHeight + Style.space(6); radius: Style.cornerRadius; color: Color.background; border.color: Color.accent; border.width: 1
-                Column {
-                  id: languageChoices
-                  anchors.left: parent.left; anchors.right: parent.right; anchors.margins: Style.space(3)
-                  Repeater {
-                    model: [{key:"system", label:root.tr("systemLanguage")}, {key:"thunderbird", label:root.tr("thunderbirdLanguage")}]
-                    delegate: Rectangle {
-                      required property var modelData
-                      width: parent.width; height: Style.space(28); radius: Style.cornerRadius
-                      color: choiceTap.containsMouse ? Color.accent : "transparent"
-                      Text { anchors.fill: parent; anchors.leftMargin: Style.space(7); verticalAlignment: Text.AlignVCenter; text: modelData.label; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
-                      MouseArea { id: choiceTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: function(mouse) { mouse.accepted = true; root.chooseLanguage(modelData.key) } }
-                    }
-                  }
-                }
-              }
-            }
-            Rectangle {
-              id: privacySelector
-              width: Style.space(92)
-              height: Style.space(30)
-              radius: Style.cornerRadius; color: "transparent"; border.color: Color.accent; border.width: 1
-              Text { anchors.left: parent.left; anchors.right: parent.right; anchors.leftMargin: Style.space(8); anchors.rightMargin: Style.space(20); anchors.verticalCenter: parent.verticalCenter; text: root.privacyMode === "private" ? root.tr("private") : root.tr("full"); color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
-              Text { text: ""; color: Color.accent; font.family: root.bar.fontFamily; anchors.right: parent.right; anchors.rightMargin: Style.space(7); anchors.verticalCenter: parent.verticalCenter }
-              MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.privacyMenuOpen = !root.privacyMenuOpen; root.languageMenuOpen = false } }
-              Rectangle {
-                visible: root.privacyMenuOpen; z: 10; anchors.top: parent.bottom; anchors.topMargin: Style.space(4); width: parent.width; height: privacyChoices.implicitHeight + Style.space(6); radius: Style.cornerRadius; color: Color.background; border.color: Color.accent; border.width: 1
-                Column {
-                  id: privacyChoices
-                  anchors.left: parent.left; anchors.right: parent.right; anchors.margins: Style.space(3)
-                  Repeater {
-                    model: [{key:"full", label:root.tr("full")}, {key:"private", label:root.tr("private")}]
-                    delegate: Rectangle {
-                      required property var modelData
-                      width: parent.width; height: Style.space(28); radius: Style.cornerRadius
-                      color: privacyTap.containsMouse ? Color.accent : "transparent"
-                      Text { anchors.fill: parent; anchors.leftMargin: Style.space(7); verticalAlignment: Text.AlignVCenter; text: modelData.label; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
-                      MouseArea { id: privacyTap; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: function(mouse) { mouse.accepted = true; root.choosePrivacyMode(modelData.key) } }
-                    }
-                  }
-                }
-              }
+
+            ButtonGroup {
+              id: privacyToggle
+              options: [
+                { value: "full", label: "Full" },
+                { value: "private", label: "Private" }
+              ]
+              value: root.privacyMode
+              foreground: root.bar.foreground
+              background: "transparent"
+              accent: Color.accent
+              fontFamily: root.bar.fontFamily
+              fontSize: Style.font.caption
+              focusable: false
+              spacing: Style.space(2)
+              onChanged: function(value) { root.choosePrivacyMode(value) }
             }
           }
+        }
+
+        Rectangle {
+          width: parent.width
+          height: 1
+          color: Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.55)
         }
 
         Text {
