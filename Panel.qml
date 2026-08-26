@@ -25,7 +25,6 @@ Panel {
   readonly property bool bridgeActive: snapshot.connected === true
   readonly property color bridgeColor: bridgeActive ? "#6dca76" : Color.urgent
   readonly property string helper: Quickshell.env("HOME") + "/.config/omarchy/plugins/io.github.villainru.thunderbird-mail-checker/bin/thunderbird-mail-checker"
-  readonly property int minimumPopupHeight: Style.space(160)
 
   function tr(key) { return Model.text(lang, key) }
   function persistSettings(values) {
@@ -111,7 +110,7 @@ Panel {
     bar: root.bar
     open: root.opened
     contentWidth: popup.fittedContentWidth(Style.space(570))
-    contentHeight: popup.fittedContentHeight(Math.max(content.implicitHeight, root.minimumPopupHeight), Style.space(620))
+    contentHeight: popup.fittedContentHeight(content.implicitHeight, Style.space(620))
 
     Flickable {
       id: mailScroll

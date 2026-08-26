@@ -7,6 +7,7 @@ All notable changes to Thunderbird Mail Checker are documented here.
 ### Changed
 
 - Removed the language selector; the panel now always follows Thunderbird's UI language.
+- Let the panel height follow its visible content instead of reserving empty selector space.
 
 ## [0.1.15] - Unreleased
 
