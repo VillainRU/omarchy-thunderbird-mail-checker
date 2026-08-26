@@ -15,11 +15,10 @@ Panel {
   property var hostWidget: null
   readonly property var barIdentity: hostWidget || root
   property var snapshot: ({ accounts: [], unreadTotal: 0 })
-  property string languageSource: String(setting("languageSource", "system"))
   property string privacyMode: String(setting("privacyMode", "full"))
   property int notifiedEvent: 0
   property var expandedAccounts: ({})
-  readonly property string lang: Model.localeCode(languageSource, Qt.locale().name, snapshot.thunderbirdLanguage)
+  readonly property string lang: Model.localeCode("thunderbird", "", snapshot.thunderbirdLanguage)
   readonly property int unreadCount: Number(snapshot.unreadTotal || 0)
   readonly property string tooltip: unreadCount > 0 ? unreadCount + " " + Model.text(lang, "unread") : Model.text(lang, "noUnread")
   readonly property var accounts: snapshot.accounts || []
@@ -38,10 +37,6 @@ Panel {
     if (root.hostWidget && "settings" in root.hostWidget) root.hostWidget.settings = entry
     if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
       root.bar.shell.updateEntryInline(root.moduleName, entry)
-  }
-  function chooseLanguage(source) {
-    languageSource = source
-    persistSettings({ languageSource: source })
   }
   function choosePrivacyMode(mode) {
     privacyMode = mode
@@ -198,23 +193,6 @@ Panel {
             spacing: Style.space(6)
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-
-            ButtonGroup {
-              id: languageToggle
-              options: [
-                { value: "system", label: "Sys" },
-                { value: "thunderbird", label: "Client" }
-              ]
-              value: root.languageSource
-              foreground: root.bar.foreground
-              background: "transparent"
-              accent: Color.accent
-              fontFamily: root.bar.fontFamily
-              fontSize: Style.font.caption
-              focusable: false
-              spacing: Style.space(2)
-              onChanged: function(value) { root.chooseLanguage(value) }
-            }
 
             ButtonGroup {
               id: privacyToggle

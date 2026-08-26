@@ -16,7 +16,7 @@ omarchy plugin enable io.github.villainru.thunderbird-mail-checker
 
 Then open Thunderbird → Add-ons and Themes → Extensions → gear menu → **Install Add-on From File**, and select the `thunderbird/thunderbird-mail-checker.xpi` path printed by `setup`. Accept Thunderbird's listed permissions and restart Thunderbird once. The widget defaults to the right section; move it with `omarchy bar move io.github.villainru.thunderbird-mail-checker --section right` if desired.
 
-The popup header contains two selectors: display language follows either the system locale or Thunderbird's UI locale; notification mode is Full (sender + subject for one message) or Private (no sender or subject). New arrivals generate one summary notification; the first connection also summarizes existing unread mail as requested.
+The popup always follows Thunderbird's UI language. Its header has a notification-mode switch: Full shows the sender and subject for one message, while Private hides them. New arrivals generate one summary notification; the first connection also summarizes existing unread mail as requested.
 
 ## Updates
 
