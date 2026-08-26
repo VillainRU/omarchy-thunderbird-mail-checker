@@ -2,12 +2,20 @@
 
 All notable changes to Thunderbird Mail Checker are documented here.
 
-## [0.1.16] - Unreleased
+## [0.1.17] - 2026-08-26
 
 ### Changed
 
+- Redesigned the panel header with a green/red Thunderbird bridge status, bridge restart on the Thunderbird icon, and a compact Full/Private mode switch.
 - Removed the language selector; the panel now always follows Thunderbird's UI language.
 - Let the panel height follow its visible content instead of reserving empty selector space.
+- Replaced the marketplace preview with a neutral-data screenshot of the current interface.
+
+## [0.1.16] - 2026-08-24
+
+### Fixed
+
+- Keep every opened selector option inside the Flickable hit area so the Thunderbird-language option is clickable.
 
 ## [0.1.15] - Unreleased
 
