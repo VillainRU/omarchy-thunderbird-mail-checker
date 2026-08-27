@@ -271,19 +271,38 @@ Panel {
                 x: Style.space(8)
                 height: Style.space(51)
                 radius: Style.cornerRadius
-                color: mailTap.containsMouse ? Style.hoverFillFor(root.bar.foreground, Color.accent) : "transparent"
+                color: messageHover.hovered ? Style.hoverFillFor(root.bar.foreground, Color.accent) : "transparent"
                 Item {
                   anchors.fill: parent
                   anchors.leftMargin: Style.space(8)
                   anchors.rightMargin: Style.space(8)
-                  Column {
+                  Item {
+                    id: messageOpenArea
                     anchors.left: parent.left
                     anchors.right: actionButtons.left
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
                     anchors.rightMargin: Style.space(8)
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: Style.space(1)
-                    Text { text: modelData.author || ""; textFormat: Text.PlainText; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; elide: Text.ElideRight; width: parent.width }
-                    Text { text: (modelData.flagged ? " " : "") + (modelData.hasAttachments ? "󰆉 " : "") + (modelData.subject || ""); textFormat: Text.PlainText; color: Qt.darker(root.bar.foreground, 1.35); font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight; width: parent.width }
+
+                    Column {
+                      anchors.left: parent.left
+                      anchors.right: parent.right
+                      anchors.verticalCenter: parent.verticalCenter
+                      spacing: Style.space(1)
+                      Text { text: modelData.author || ""; textFormat: Text.PlainText; color: root.bar.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.body; elide: Text.ElideRight; width: parent.width }
+                      Text { text: (modelData.flagged ? " " : "") + (modelData.hasAttachments ? "󰆉 " : "") + (modelData.subject || ""); textFormat: Text.PlainText; color: Qt.darker(root.bar.foreground, 1.35); font.family: root.bar.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight; width: parent.width }
+                    }
+
+                    HoverHandler {
+                      id: messageHover
+                      cursorShape: Qt.PointingHandCursor
+                    }
+
+                    TapHandler {
+                      acceptedButtons: Qt.LeftButton
+                      gesturePolicy: TapHandler.DragThreshold
+                      onTapped: root.runAction("open", mailRow.modelData)
+                    }
                   }
                   Row {
                     id: actionButtons
@@ -313,18 +332,6 @@ Panel {
                         onClicked: root.runAction(modelData.action, mailRow.modelData)
                       }
                     }
-                  }
-                  MouseArea {
-                    id: mailTap
-                    anchors.left: parent.left
-                    anchors.right: actionButtons.left
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
-                    z: 1
-                    hoverEnabled: true
-                    preventStealing: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.runAction("open", mailRow.modelData)
                   }
                 }
               }

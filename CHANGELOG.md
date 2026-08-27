@@ -2,6 +2,12 @@
 
 All notable changes to Thunderbird Mail Checker are documented here.
 
+## [0.1.18] - Unreleased
+
+### Fixed
+
+- Use a dedicated tap handler for mail previews so clicking a message reliably opens it without interfering with scrolling or the action buttons.
+
 ## [0.1.17] - 2026-08-26
 
 ### Changed
