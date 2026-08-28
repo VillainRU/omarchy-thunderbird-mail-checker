@@ -59,7 +59,11 @@ Panel {
     if (event > notifiedEvent) {
       notifiedEvent = event
       var notification = parsed.notification || {}
-      notificationProc.command = ["omarchy-notification-send", notificationText(notification)]
+      // omarchy-notification-send defaults to the privileged "omarchy-action"
+      // identity, whose user-action confirmations intentionally bypass DND.
+      // Mail is an ordinary application notification and must follow Omarchy's
+      // global Silence Notifications setting.
+      notificationProc.command = ["omarchy-notification-send", "--app-name", "Thunderbird Mail Checker", notificationText(notification)]
       notificationProc.running = true
     }
   }

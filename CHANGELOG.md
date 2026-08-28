@@ -7,6 +7,7 @@ All notable changes to Thunderbird Mail Checker are documented here.
 ### Fixed
 
 - Use a dedicated tap handler for mail previews so clicking a message reliably opens it without interfering with scrolling or the action buttons.
+- Identify new-mail alerts as Thunderbird Mail Checker notifications so Omarchy's global Silence Notifications mode suppresses them.
 
 ## [0.1.17] - 2026-08-26
 
