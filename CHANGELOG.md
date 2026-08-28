@@ -2,7 +2,7 @@
 
 All notable changes to Thunderbird Mail Checker are documented here.
 
-## [0.1.18] - Unreleased
+## [0.1.18] - 2026-08-28
 
 ### Fixed
 
