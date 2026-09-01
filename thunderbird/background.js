@@ -9,6 +9,9 @@ let pendingNotification = null;
 let pendingWaiters = [];
 let scheduledNotification = null;
 let scheduledRefresh;
+const ATTACHMENT_CACHE_LIMIT = 200;
+const ATTACHMENT_CACHE_TTL = 60 * 60 * 1000;
+const attachmentCache = new Map();
 
 function post(payload) { try { port.postMessage(payload); } catch (error) { console.error(error); } }
 function reportError(error) {
@@ -22,8 +25,23 @@ function inboxes(folders, result) {
   }
 }
 async function attachmentFlag(id, diagnostics) {
+  const cached = attachmentCache.get(id);
+  if (cached && Date.now() - cached.updatedAt < ATTACHMENT_CACHE_TTL) {
+    attachmentCache.delete(id);
+    attachmentCache.set(id, cached);
+    diagnostics.attachmentCacheHits += 1;
+    return cached.value;
+  }
+  attachmentCache.delete(id);
   diagnostics.attachmentLookups += 1;
-  try { return (await messenger.messages.listAttachments(id)).length > 0; } catch (error) { return false; }
+  let value = false;
+  try { value = (await messenger.messages.listAttachments(id)).length > 0; } catch (error) { value = false; }
+  attachmentCache.set(id, { value, updatedAt: Date.now() });
+  while (attachmentCache.size > ATTACHMENT_CACHE_LIMIT) attachmentCache.delete(attachmentCache.keys().next().value);
+  return value;
+}
+function forgetAttachments(messageList) {
+  for (const message of messageList && messageList.messages || []) attachmentCache.delete(message.id);
 }
 async function supportsSortedQueries() {
   if (sortedQuerySupport !== undefined) return sortedQuerySupport;
@@ -63,7 +81,7 @@ async function unreadInFolder(folder, diagnostics) {
 }
 async function snapshot(notification) {
   const startedAt = Date.now();
-  const diagnostics = { scannedMessages: 0, attachmentLookups: 0 };
+  const diagnostics = { scannedMessages: 0, attachmentLookups: 0, attachmentCacheHits: 0 };
   const accounts = await messenger.accounts.list(true);
   const visible = [];
   let total = 0;
@@ -187,8 +205,15 @@ messenger.messages.onNewMailReceived.addListener(async (folder, messages) => {
 messenger.messages.onUpdated.addListener((message, changed) => {
   if (message.folder && message.folder.type === "inbox" && ("read" in changed || "flagged" in changed)) scheduleSnapshot(null);
 });
-messenger.messages.onMoved.addListener(() => scheduleSnapshot(null));
-messenger.messages.onDeleted.addListener(() => scheduleSnapshot(null));
+messenger.messages.onMoved.addListener((originalMessages, movedMessages) => {
+  forgetAttachments(originalMessages);
+  forgetAttachments(movedMessages);
+  scheduleSnapshot(null);
+});
+messenger.messages.onDeleted.addListener(messages => {
+  forgetAttachments(messages);
+  scheduleSnapshot(null);
+});
 if (messenger.messages.onCopied) messenger.messages.onCopied.addListener(() => scheduleSnapshot(null));
 setInterval(() => requestSnapshot(null).catch(reportError), 600000);
 connect();

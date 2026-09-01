@@ -10,7 +10,7 @@ function message(id, read = true) {
 
 function loadBackground({ messages, pageSize = 100, browserVersion = "128.0" }) {
   const posts = [];
-  const calls = { list: 0, query: [], abortList: 0, activeQueries: 0, maxActiveQueries: 0 };
+  const calls = { list: 0, query: [], abortList: 0, listAttachments: 0, activeQueries: 0, maxActiveQueries: 0 };
   const intervals = [];
   const pages = new Map();
   let pageNumber = 0;
@@ -58,7 +58,7 @@ function loadBackground({ messages, pageSize = 100, browserVersion = "128.0" }) 
         },
         async continueList(id) { return makePage(pages.get(id)); },
         async abortList() { calls.abortList += 1; },
-        async listAttachments() { return []; },
+        async listAttachments() { calls.listAttachments += 1; return []; },
         ...events,
         async get() {}, async update() {}, async move() {}, async delete() {}
       },
@@ -111,5 +111,18 @@ async function testRefreshCoalescing() {
   assert.equal(events.onDeleted.listeners.length, 1);
 }
 
-Promise.all([testLargeInboxBaseline(), testServerSidePreviewLimit(), testRefreshCoalescing()])
+async function testAttachmentCache() {
+  const messages = [message(1, false), message(2, false)];
+  const { context, posts, calls } = loadBackground({ messages });
+  await vm.runInContext("snapshot(null)", context);
+  await vm.runInContext("snapshot(null)", context);
+  const snapshots = posts.filter(value => value.type === "snapshot");
+  assert.equal(calls.listAttachments, 2);
+  assert.equal(snapshots[1].status.diagnostics.attachmentLookups, 0);
+  assert.equal(snapshots[1].status.diagnostics.attachmentCacheHits, 2);
+  await vm.runInContext("Promise.all(Array.from({length: 205}, (_, index) => attachmentFlag(index + 1000, {attachmentLookups: 0, attachmentCacheHits: 0})))", context);
+  assert.equal(vm.runInContext("attachmentCache.size", context), 200);
+}
+
+Promise.all([testLargeInboxBaseline(), testServerSidePreviewLimit(), testRefreshCoalescing(), testAttachmentCache()])
   .then(() => console.log("background scheduling: ok"));
