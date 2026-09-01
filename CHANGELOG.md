@@ -2,6 +2,19 @@
 
 All notable changes to Thunderbird Mail Checker are documented here.
 
+## [0.1.19] - 2026-09-01
+
+### Performance
+
+- Read Inbox counters directly and query only unread messages instead of scanning every stored message each minute.
+- Coalesce mailbox events into serialized refreshes, retain a ten-minute reconciliation pass, and cache attachment flags with bounded memory.
+- Push state and actions over one persistent Unix socket, eliminating periodic Python processes and idle native-host polling.
+- Instantiate mail-row delegates only while the panel is open and reuse the translation catalog.
+
+### Companion MailExtension
+
+- Version 0.1.4 is included with optimized queries, event-driven refresh scheduling, safe performance counters, and regression tests.
+
 ## [0.1.18] - 2026-08-28
 
 ### Fixed
