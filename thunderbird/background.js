@@ -14,30 +14,34 @@ function inboxes(folders, result) {
     inboxes(folder.subFolders, result);
   }
 }
-async function attachmentFlag(id) {
+async function attachmentFlag(id, diagnostics) {
+  diagnostics.attachmentLookups += 1;
   try { return (await messenger.messages.listAttachments(id)).length > 0; } catch (error) { return false; }
 }
-async function unreadInFolder(folder) {
+async function unreadInFolder(folder, diagnostics) {
   const messages = [];
   let page = await messenger.messages.list(folder.id);
   while (page) {
+    diagnostics.scannedMessages += page.messages.length;
     messages.push(...page.messages.filter(message => !message.read));
     page = page.id ? await messenger.messages.continueList(page.id) : null;
   }
   return messages;
 }
 async function snapshot(notification) {
+  const startedAt = Date.now();
+  const diagnostics = { scannedMessages: 0, attachmentLookups: 0 };
   const accounts = await messenger.accounts.list(true);
   const visible = [];
   let total = 0;
   for (const account of accounts) {
     const folders = []; inboxes(account.folders, folders);
-    const unread = (await Promise.all(folders.map(unreadInFolder))).flat();
+    const unread = (await Promise.all(folders.map(folder => unreadInFolder(folder, diagnostics)))).flat();
     if (!unread.length) continue;
     unread.sort((a, b) => Number(b.date) - Number(a.date));
     const preview = await Promise.all(unread.slice(0, 5).map(async message => ({
       id: message.id, author: message.author, subject: message.subject, date: message.date,
-      flagged: Boolean(message.flagged), hasAttachments: await attachmentFlag(message.id)
+      flagged: Boolean(message.flagged), hasAttachments: await attachmentFlag(message.id, diagnostics)
     })));
     const identity = account.identities && account.identities[0];
     visible.push({ accountId: account.id, name: account.name, email: identity ? identity.email : account.name, unreadCount: unread.length, messages: preview, expanded: false });
@@ -49,7 +53,11 @@ async function snapshot(notification) {
     notification.count = total;
     notification.first = visible.length && visible[0].messages.length ? visible[0].messages[0] : null;
   }
-  post({ type: "snapshot", status: { connected: true, updatedAt: Date.now(), thunderbirdLanguage: messenger.i18n.getUILanguage(), unreadTotal: total, accounts: visible, notification: notification || null } });
+  post({ type: "snapshot", status: {
+    connected: true, updatedAt: Date.now(), thunderbirdLanguage: messenger.i18n.getUILanguage(),
+    unreadTotal: total, accounts: visible, notification: notification || null,
+    diagnostics: { snapshotDurationMs: Date.now() - startedAt, ...diagnostics }
+  } });
 }
 async function folderFor(messageId, type) {
   const message = await messenger.messages.get(messageId);
