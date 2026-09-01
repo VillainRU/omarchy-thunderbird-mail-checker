@@ -10,7 +10,8 @@ function message(id, read = true) {
 
 function loadBackground({ messages, pageSize = 100, browserVersion = "128.0" }) {
   const posts = [];
-  const calls = { list: 0, query: [], abortList: 0 };
+  const calls = { list: 0, query: [], abortList: 0, activeQueries: 0, maxActiveQueries: 0 };
+  const intervals = [];
   const pages = new Map();
   let pageNumber = 0;
   function makePage(items, size = pageSize) {
@@ -21,31 +22,44 @@ function loadBackground({ messages, pageSize = 100, browserVersion = "128.0" }) 
     return { id, messages: first };
   }
 
-  const listener = { addListener() {} };
+  function event() {
+    const listeners = [];
+    return { listeners, addListener(callback) { listeners.push(callback); } };
+  }
+  const portMessage = event();
+  const portDisconnect = event();
+  const events = {
+    onNewMailReceived: event(), onUpdated: event(), onMoved: event(), onDeleted: event(), onCopied: event()
+  };
   const context = vm.createContext({
     console,
-    setTimeout() {},
-    setInterval() {},
+    setTimeout(callback) { return { callback }; },
+    clearTimeout() {},
+    setInterval(callback, interval) { intervals.push({ callback, interval }); },
     messenger: {
       accounts: { async list() { return [{ id: "account", name: "Account", identities: [], folders: [{ id: "inbox", type: "inbox", subFolders: [] }] }]; } },
       i18n: { getUILanguage() { return "en-US"; } },
       runtime: {
         async getBrowserInfo() { return { version: browserVersion }; },
-        connectNative() { return { postMessage(value) { posts.push(value); }, onMessage: listener, onDisconnect: listener }; }
+        connectNative() { return { postMessage(value) { posts.push(value); }, onMessage: portMessage, onDisconnect: portDisconnect }; }
       },
       folders: { async getFolderInfo() { return { unreadMessageCount: messages.filter(value => !value.read).length }; } },
       messages: {
         async list() { calls.list += 1; return makePage(messages); },
         async query(query) {
+          calls.activeQueries += 1;
+          calls.maxActiveQueries = Math.max(calls.maxActiveQueries, calls.activeQueries);
           calls.query.push(query);
           let result = messages.filter(value => query.unread ? !value.read : true);
           if (query.sortType === "date") result = result.sort((a, b) => Number(b.date) - Number(a.date));
+          await Promise.resolve();
+          calls.activeQueries -= 1;
           return makePage(result, query.messagesPerPage || pageSize);
         },
         async continueList(id) { return makePage(pages.get(id)); },
         async abortList() { calls.abortList += 1; },
         async listAttachments() { return []; },
-        onNewMailReceived: listener,
+        ...events,
         async get() {}, async update() {}, async move() {}, async delete() {}
       },
       messageDisplay: { async open() {} },
@@ -54,7 +68,7 @@ function loadBackground({ messages, pageSize = 100, browserVersion = "128.0" }) 
   });
   const source = fs.readFileSync(path.join(__dirname, "../thunderbird/background.js"), "utf8");
   vm.runInContext(source, context);
-  return { context, posts, calls };
+  return { context, posts, calls, events, intervals };
 }
 
 async function testLargeInboxBaseline() {
@@ -85,5 +99,17 @@ async function testServerSidePreviewLimit() {
   assert.equal(calls.abortList, 1);
 }
 
-Promise.all([testLargeInboxBaseline(), testServerSidePreviewLimit()])
-  .then(() => console.log("background queries: ok"));
+async function testRefreshCoalescing() {
+  const messages = [message(1, false)];
+  const { context, calls, events, intervals } = loadBackground({ messages });
+  await vm.runInContext("Promise.all([requestSnapshot(null), requestSnapshot(null), requestSnapshot(null)])", context);
+  assert.equal(calls.query.length, 2);
+  assert.equal(calls.maxActiveQueries, 1);
+  assert.equal(intervals[0].interval, 600000);
+  assert.equal(events.onUpdated.listeners.length, 1);
+  assert.equal(events.onMoved.listeners.length, 1);
+  assert.equal(events.onDeleted.listeners.length, 1);
+}
+
+Promise.all([testLargeInboxBaseline(), testServerSidePreviewLimit(), testRefreshCoalescing()])
+  .then(() => console.log("background scheduling: ok"));

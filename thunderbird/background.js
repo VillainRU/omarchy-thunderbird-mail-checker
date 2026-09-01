@@ -3,6 +3,12 @@ let port;
 let initialized = false;
 let eventId = 0;
 let sortedQuerySupport;
+let snapshotRunning = false;
+let snapshotPending = false;
+let pendingNotification = null;
+let pendingWaiters = [];
+let scheduledNotification = null;
+let scheduledRefresh;
 
 function post(payload) { try { port.postMessage(payload); } catch (error) { console.error(error); } }
 function reportError(error) {
@@ -88,6 +94,55 @@ async function snapshot(notification) {
     diagnostics: { snapshotDurationMs: Date.now() - startedAt, ...diagnostics }
   } });
 }
+function mergeNotification(current, next) {
+  if (!next) return current;
+  if (!current) return { ...next };
+  return {
+    eventId: Math.max(Number(current.eventId || 0), Number(next.eventId || 0)),
+    count: Number(current.count || 0) + Number(next.count || 0),
+    first: current.first || next.first || null,
+    initial: Boolean(current.initial || next.initial)
+  };
+}
+async function drainSnapshots() {
+  if (snapshotRunning) return;
+  snapshotRunning = true;
+  try {
+    while (snapshotPending) {
+      snapshotPending = false;
+      const notification = pendingNotification;
+      const waiters = pendingWaiters;
+      pendingNotification = null;
+      pendingWaiters = [];
+      try {
+        await snapshot(notification);
+        for (const waiter of waiters) waiter.resolve();
+      } catch (error) {
+        for (const waiter of waiters) waiter.reject(error);
+      }
+    }
+  } finally {
+    snapshotRunning = false;
+    if (snapshotPending) drainSnapshots();
+  }
+}
+function requestSnapshot(notification) {
+  snapshotPending = true;
+  pendingNotification = mergeNotification(pendingNotification, notification);
+  const result = new Promise((resolve, reject) => pendingWaiters.push({ resolve, reject }));
+  drainSnapshots();
+  return result;
+}
+function scheduleSnapshot(notification) {
+  scheduledNotification = mergeNotification(scheduledNotification, notification);
+  if (scheduledRefresh) clearTimeout(scheduledRefresh);
+  scheduledRefresh = setTimeout(() => {
+    const nextNotification = scheduledNotification;
+    scheduledNotification = null;
+    scheduledRefresh = null;
+    requestSnapshot(nextNotification).catch(reportError);
+  }, 400);
+}
 async function folderFor(messageId, type) {
   const message = await messenger.messages.get(messageId);
   const account = (await messenger.accounts.list(true)).find(value => value.id === message.folder.accountId);
@@ -112,13 +167,13 @@ function connect() {
   port = messenger.runtime.connectNative(HOST);
   port.onMessage.addListener(async request => {
     if (request.type === "ready") {
-      try { await snapshot(initialized ? null : { eventId: ++eventId, initial: true }); }
+      try { await requestSnapshot(initialized ? null : { eventId: ++eventId, initial: true }); }
       catch (error) { reportError(error); }
       initialized = true;
       return;
     }
     if (request.type !== "action") return;
-    try { await perform(request); await snapshot(null); post({ type: "action-result", requestId: request.requestId, ok: true }); }
+    try { await perform(request); await requestSnapshot(null); post({ type: "action-result", requestId: request.requestId, ok: true }); }
     catch (error) { post({ type: "action-result", requestId: request.requestId, ok: false, error: String(error.message || error) }); }
   });
   port.onDisconnect.addListener(() => setTimeout(connect, 5000));
@@ -127,8 +182,13 @@ function connect() {
 messenger.messages.onNewMailReceived.addListener(async (folder, messages) => {
   if (folder.type !== "inbox") return;
   const first = messages.messages && messages.messages[0];
-  try { await snapshot({ eventId: ++eventId, count: (messages.messages || []).length, first: first ? { author: first.author, subject: first.subject } : null }); }
-  catch (error) { reportError(error); }
+  scheduleSnapshot({ eventId: ++eventId, count: (messages.messages || []).length, first: first ? { author: first.author, subject: first.subject } : null });
 }, false);
-setInterval(() => snapshot(null).catch(reportError), 60000);
+messenger.messages.onUpdated.addListener((message, changed) => {
+  if (message.folder && message.folder.type === "inbox" && ("read" in changed || "flagged" in changed)) scheduleSnapshot(null);
+});
+messenger.messages.onMoved.addListener(() => scheduleSnapshot(null));
+messenger.messages.onDeleted.addListener(() => scheduleSnapshot(null));
+if (messenger.messages.onCopied) messenger.messages.onCopied.addListener(() => scheduleSnapshot(null));
+setInterval(() => requestSnapshot(null).catch(reportError), 600000);
 connect();
