@@ -17,6 +17,9 @@ Panel {
   property var snapshot: ({ accounts: [], unreadTotal: 0 })
   property string privacyMode: String(setting("privacyMode", "full"))
   property int notifiedEvent: 0
+  property int nextRequestId: 0
+  property bool actionPending: false
+  property bool restartPending: false
   property var expandedAccounts: ({})
   readonly property string lang: Model.localeCode("thunderbird", "", snapshot.thunderbirdLanguage)
   readonly property int unreadCount: Number(snapshot.unreadTotal || 0)
@@ -24,7 +27,6 @@ Panel {
   readonly property var accounts: snapshot.accounts || []
   readonly property bool bridgeActive: snapshot.connected === true
   readonly property color bridgeColor: bridgeActive ? "#6dca76" : Color.urgent
-  readonly property string helper: Quickshell.env("HOME") + "/.config/omarchy/plugins/io.github.villainru.thunderbird-mail-checker/bin/thunderbird-mail-checker"
   readonly property string socketPath: String(Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/thunderbird-mail-checker.sock"
 
   function tr(key) { return Model.text(lang, key) }
@@ -48,9 +50,10 @@ Panel {
   function closeForPopoutSwitch() { root.close() }
   function refresh() { if (!bridgeSocket.connected) bridgeSocket.connected = true }
   function restartBridge() {
-    if (restartProc.running) return
-    restartProc.command = [helper, "restart"]
-    restartProc.running = true
+    if (restartPending || !bridgeSocket.connected) return
+    restartPending = true
+    bridgeSocket.write('{"type":"restart"}\n')
+    bridgeSocket.flush()
   }
   function applySnapshot(raw) {
     var parsed = typeof raw === "string" ? Model.safeJson(raw, null) : raw
@@ -76,9 +79,11 @@ Panel {
     return (first.author || tr("newMail")) + " — " + (first.subject || "")
   }
   function runAction(action, message) {
-    if (!message || !message.id || actionProc.running) return
-    actionProc.command = [helper, "action", action, String(message.id)]
-    actionProc.running = true
+    if (!message || !message.id || actionPending || !bridgeSocket.connected) return
+    actionPending = true
+    nextRequestId += 1
+    bridgeSocket.write(JSON.stringify({ type: "action", requestId: "qml-" + nextRequestId, action: action, messageId: Number(message.id) }) + "\n")
+    bridgeSocket.flush()
   }
   function accountKey(account, index) {
     return String(account.email || account.name || index)
@@ -102,13 +107,16 @@ Panel {
       onRead: function(line) {
         var message = Model.safeJson(line, null)
         if (message && message.type === "status") root.applySnapshot(message.status)
+        else if (message && message.type === "action-result") root.actionPending = false
       }
     }
     onConnectedChanged: {
       if (connected) {
+        root.restartPending = false
         write('{"type":"subscribe"}\n')
         flush()
       } else {
+        root.actionPending = false
         reconnectTimer.restart()
       }
     }
@@ -116,10 +124,7 @@ Panel {
   Component.onCompleted: bridgeSocket.connected = true
   Timer { id: reconnectTimer; interval: 2000; repeat: false; onTriggered: bridgeSocket.connected = true }
 
-  Process { id: actionProc }
-  Process { id: restartProc; onExited: bridgeRefreshTimer.restart() }
   Process { id: notificationProc }
-  Timer { id: bridgeRefreshTimer; interval: 5500; repeat: false; onTriggered: root.refresh() }
 
   KeyboardPanel {
     id: popup
@@ -181,14 +186,14 @@ Panel {
                 anchors.bottomMargin: Style.space(1)
 
                 NumberAnimation on rotation {
-                  running: restartProc.running
+                  running: root.restartPending
                   from: 0
                   to: 360
                   duration: 900
                   loops: Animation.Infinite
                 }
 
-                onRotationChanged: if (!restartProc.running && rotation !== 0) rotation = 0
+                onRotationChanged: if (!root.restartPending && rotation !== 0) rotation = 0
               }
             }
 
@@ -255,7 +260,7 @@ Panel {
 
         Repeater {
           width: parent.width
-          model: root.accounts
+          model: root.opened ? root.accounts : []
           delegate: Column {
             required property var modelData
             required property int index

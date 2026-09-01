@@ -66,6 +66,16 @@ try:
     pushed = json.loads(subscriber_file.readline())
     assert pushed["type"] == "status"
     assert pushed["status"]["unreadTotal"] == 7
+    subscriber.sendall(b'{"type":"action","requestId":"socket-action","action":"open","messageId":321}\n')
+    header = host.stdout.read(4)
+    size = struct.unpack("<I", header)[0]
+    socket_request = json.loads(host.stdout.read(size).decode())
+    assert socket_request["requestId"] == "socket-action"
+    assert socket_request["messageId"] == 321
+    send({"type": "action-result", "requestId": "socket-action", "ok": True})
+    socket_result = json.loads(subscriber_file.readline())
+    assert socket_result["type"] == "action-result"
+    assert socket_result["ok"] is True
     time.sleep(0.3)
     status = json.loads(subprocess.check_output([helper, "status"], text=True))
     assert status["connected"] is True

@@ -10,6 +10,7 @@ import json
 import os
 import pathlib
 import secrets
+import selectors
 import socket
 import struct
 import subprocess
@@ -175,99 +176,170 @@ def native_host():
     try: SOCKET_PATH.unlink()
     except FileNotFoundError: pass
     server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    server.bind(str(SOCKET_PATH)); os.chmod(SOCKET_PATH, 0o600); server.listen(8); server.settimeout(0.2)
+    server.bind(str(SOCKET_PATH)); os.chmod(SOCKET_PATH, 0o600); server.listen(8); server.setblocking(False)
+    selector = selectors.DefaultSelector()
+    selector.register(server, selectors.EVENT_READ, "server")
+    wake_reader, wake_writer = socket.socketpair()
+    wake_reader.setblocking(False); wake_writer.setblocking(False)
+    selector.register(wake_reader, selectors.EVENT_READ, "wakeup")
     pending = {}
+    connections = {}
     subscribers = set()
     native_ready = False
+    current_status = fallback_status()
     inbound = queue.Queue()
+    running = True
+    restarting = False
 
-    def send_status(client, status):
-        client.sendall((json.dumps({"type": "status", "status": status}, ensure_ascii=False) + "\n").encode())
+    def close_client(client):
+        subscribers.discard(client)
+        for request_id, request in list(pending.items()):
+            if request["client"] is client:
+                pending.pop(request_id, None)
+        connections.pop(client, None)
+        try: selector.unregister(client)
+        except (KeyError, ValueError): pass
+        try: client.close()
+        except OSError: pass
+
+    def send_json(client, payload, close_after=False):
+        try:
+            client.sendall((json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n").encode())
+        except OSError:
+            close_after = True
+        if close_after:
+            close_client(client)
 
     def broadcast_status(status):
-        stale = []
-        for subscriber in subscribers:
+        for subscriber in list(subscribers):
+            send_json(subscriber, {"type": "status", "status": status})
+
+    def handle_request(client, request):
+        nonlocal running, restarting
+        kind = request.get("type")
+        subscribed = client in subscribers
+        if kind == "status":
+            send_json(client, {"ok": True, "status": current_status}, close_after=not subscribed)
+        elif kind == "subscribe":
+            subscribers.add(client)
+            send_json(client, {"type": "status", "status": current_status})
+        elif kind == "restart":
+            send_json(client, {"ok": True}, close_after=not subscribed)
+            restarting = True
+            running = False
+        elif kind == "action":
+            request_id = request.get("requestId")
+            if not native_ready:
+                send_json(client, {"type": "action-result", "requestId": request_id, "ok": False, "error": "Thunderbird bridge is unavailable"}, close_after=not subscribed)
+            elif not request_id or request_id in pending:
+                send_json(client, {"type": "action-result", "requestId": request_id, "ok": False, "error": "Invalid request id"}, close_after=not subscribed)
+            else:
+                pending[request_id] = {"client": client, "closeAfter": not subscribed, "deadline": time.monotonic() + 5}
+                write_native(request)
+        else:
+            send_json(client, {"ok": False, "error": "bad request"}, close_after=not subscribed)
+
+    def read_client(client):
+        try:
+            data = client.recv(65536)
+        except BlockingIOError:
+            return
+        except OSError:
+            close_client(client)
+            return
+        if not data:
+            close_client(client)
+            return
+        state = connections.get(client)
+        if state is None:
+            return
+        state["buffer"] += data
+        if len(state["buffer"]) > 1024 * 1024:
+            close_client(client)
+            return
+        while b"\n" in state["buffer"] and client in connections:
+            line, state["buffer"] = state["buffer"].split(b"\n", 1)
             try:
-                send_status(subscriber, status)
-            except OSError:
-                stale.append(subscriber)
-        for subscriber in stale:
-            subscribers.discard(subscriber)
-            subscriber.close()
+                request = json.loads(line.decode()) if line else {}
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                request = {}
+            handle_request(client, request)
 
     def read_from_extension():
         try:
             while True:
                 message = read_native(sys.stdin.buffer)
                 inbound.put(message)
+                try: wake_writer.send(b"x")
+                except (BlockingIOError, OSError): pass
                 if message is None:
                     break
         except Exception as error:
             inbound.put({"type": "reader-error", "error": str(error)})
+            try: wake_writer.send(b"x")
+            except (BlockingIOError, OSError): pass
 
     threading.Thread(target=read_from_extension, daemon=True).start()
     try:
-        while True:
-            try:
-                client, _ = server.accept(); client.settimeout(3)
-                raw = b""
-                while not raw.endswith(b"\n"):
-                    data = client.recv(65536)
-                    if not data: break
-                    raw += data
-                request = json.loads(raw.decode()) if raw else {}
-                if request.get("type") == "status":
-                    client.sendall((json.dumps({"ok": True, "status": load_json(STATUS_PATH, fallback_status())}, ensure_ascii=False) + "\n").encode()); client.close()
-                elif request.get("type") == "subscribe":
-                    send_status(client, load_json(STATUS_PATH, fallback_status()))
-                    subscribers.add(client)
-                elif request.get("type") == "restart":
-                    client.sendall(b'{"ok":true}\n'); client.close(); server.close()
-                    for subscriber in subscribers: subscriber.close()
-                    try: SOCKET_PATH.unlink()
-                    except FileNotFoundError: pass
-                    # The native-messaging reader blocks on Thunderbird's stdin.
-                    # Exit directly so it cannot keep Python alive during a deliberate restart.
-                    os._exit(0)
-                elif request.get("type") == "action":
-                    if native_ready:
-                        pending[request["requestId"]] = client
-                        write_native(request)
-                    else:
-                        client.sendall(b'{"ok":false,"error":"Thunderbird bridge is unavailable"}\n'); client.close()
+        while running:
+            timeout = None
+            if pending:
+                timeout = max(0, min(request["deadline"] for request in pending.values()) - time.monotonic())
+            for key, _ in selector.select(timeout):
+                if key.data == "server":
+                    while True:
+                        try: client, _ = server.accept()
+                        except BlockingIOError: break
+                        client.setblocking(False)
+                        connections[client] = {"buffer": b""}
+                        selector.register(client, selectors.EVENT_READ, "client")
+                elif key.data == "wakeup":
+                    try:
+                        while wake_reader.recv(4096): pass
+                    except BlockingIOError:
+                        pass
                 else:
-                    client.sendall(b'{"ok":false,"error":"bad request"}\n'); client.close()
-            except socket.timeout:
-                pass
-            except (OSError, ValueError, json.JSONDecodeError):
-                pass
+                    read_client(key.fileobj)
             while True:
                 try: message = inbound.get_nowait()
                 except queue.Empty: break
-                if message is None: return
+                if message is None:
+                    running = False
+                    break
                 kind = message.get("type")
                 if kind == "snapshot":
-                    status = message.get("status", {})
-                    atomic_json(STATUS_PATH, status)
-                    broadcast_status(status)
+                    current_status = message.get("status", {})
+                    atomic_json(STATUS_PATH, current_status)
+                    broadcast_status(current_status)
                 elif kind == "error":
-                    status = load_json(STATUS_PATH, fallback_status())
-                    status.update({"connected": True, "setupRequired": False, "lastError": message.get("error", "Unknown extension error")})
-                    atomic_json(STATUS_PATH, status)
-                    broadcast_status(status)
+                    current_status.update({"connected": True, "setupRequired": False, "lastError": message.get("error", "Unknown extension error")})
+                    atomic_json(STATUS_PATH, current_status)
+                    broadcast_status(current_status)
                 elif kind == "ready":
                     native_ready = True
                 elif kind == "action-result":
-                    client = pending.pop(message.get("requestId"), None)
-                    if client:
-                        try: client.sendall((json.dumps({"ok": bool(message.get("ok")), "error": message.get("error", "")}, ensure_ascii=False) + "\n").encode())
-                        finally: client.close()
+                    request_id = message.get("requestId")
+                    request = pending.pop(request_id, None)
+                    if request:
+                        send_json(request["client"], {"type": "action-result", "requestId": request_id, "ok": bool(message.get("ok")), "error": message.get("error", "")}, close_after=request["closeAfter"])
+                elif kind == "reader-error":
+                    running = False
+            now = time.monotonic()
+            for request_id, request in list(pending.items()):
+                if request["deadline"] <= now:
+                    pending.pop(request_id, None)
+                    send_json(request["client"], {"type": "action-result", "requestId": request_id, "ok": False, "error": "Thunderbird action timed out"}, close_after=request["closeAfter"])
     finally:
-        for client in pending.values(): client.close()
-        for subscriber in subscribers: subscriber.close()
+        for client in list(connections): close_client(client)
+        selector.close()
+        wake_reader.close(); wake_writer.close()
         server.close()
         try: SOCKET_PATH.unlink()
         except FileNotFoundError: pass
+    if restarting:
+        # The reader thread is blocked on Thunderbird's stdin; a direct exit avoids
+        # waiting for the buffered stream lock during an intentional reconnect.
+        os._exit(0)
 
 def command_setup():
     manifest_dir = pathlib.Path.home() / ".mozilla/native-messaging-hosts"
