@@ -25,6 +25,7 @@ Panel {
   readonly property bool bridgeActive: snapshot.connected === true
   readonly property color bridgeColor: bridgeActive ? "#6dca76" : Color.urgent
   readonly property string helper: Quickshell.env("HOME") + "/.config/omarchy/plugins/io.github.villainru.thunderbird-mail-checker/bin/thunderbird-mail-checker"
+  readonly property string socketPath: String(Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/thunderbird-mail-checker.sock"
 
   function tr(key) { return Model.text(lang, key) }
   function persistSettings(values) {
@@ -45,14 +46,14 @@ Panel {
   function close() { controller.hide() }
   function toggle() { opened ? close() : open() }
   function closeForPopoutSwitch() { root.close() }
-  function refresh() { if (!statusProc.running) statusProc.running = true }
+  function refresh() { if (!bridgeSocket.connected) bridgeSocket.connected = true }
   function restartBridge() {
     if (restartProc.running) return
     restartProc.command = [helper, "restart"]
     restartProc.running = true
   }
   function applySnapshot(raw) {
-    var parsed = Model.safeJson(raw, null)
+    var parsed = typeof raw === "string" ? Model.safeJson(raw, null) : raw
     if (!parsed || typeof parsed !== "object") return
     snapshot = parsed
     var event = Number(parsed.notification && parsed.notification.eventId || 0)
@@ -94,15 +95,28 @@ Panel {
     expandedAccounts = next
   }
 
-  Timer { interval: 60000; running: true; repeat: true; triggeredOnStart: true; onTriggered: root.refresh() }
-
-  Process {
-    id: statusProc
-    command: [root.helper, "status"]
-    stdout: StdioCollector { id: statusOut; waitForEnd: true }
-    onExited: function(exitCode) { if (exitCode === 0) root.applySnapshot(statusOut.text) }
+  Socket {
+    id: bridgeSocket
+    path: root.socketPath
+    parser: SplitParser {
+      onRead: function(line) {
+        var message = Model.safeJson(line, null)
+        if (message && message.type === "status") root.applySnapshot(message.status)
+      }
+    }
+    onConnectedChanged: {
+      if (connected) {
+        write('{"type":"subscribe"}\n')
+        flush()
+      } else {
+        reconnectTimer.restart()
+      }
+    }
   }
-  Process { id: actionProc; onExited: root.refresh() }
+  Component.onCompleted: bridgeSocket.connected = true
+  Timer { id: reconnectTimer; interval: 2000; repeat: false; onTriggered: bridgeSocket.connected = true }
+
+  Process { id: actionProc }
   Process { id: restartProc; onExited: bridgeRefreshTimer.restart() }
   Process { id: notificationProc }
   Timer { id: bridgeRefreshTimer; interval: 5500; repeat: false; onTriggered: root.refresh() }

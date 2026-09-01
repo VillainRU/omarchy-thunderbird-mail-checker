@@ -35,6 +35,7 @@ echo "unavailable action: not queued"
 python - "$helper" <<'PY'
 import json
 import os
+import socket
 import struct
 import subprocess
 import sys
@@ -42,6 +43,7 @@ import time
 
 helper = sys.argv[1]
 host = subprocess.Popen([helper, "native-host"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+subscriber = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 
 def send(value):
     raw = json.dumps(value).encode()
@@ -49,8 +51,21 @@ def send(value):
     host.stdin.flush()
 
 try:
+    socket_path = os.path.join(os.environ["XDG_RUNTIME_DIR"], "thunderbird-mail-checker.sock")
+    for _ in range(30):
+        try:
+            subscriber.connect(socket_path)
+            break
+        except (FileNotFoundError, ConnectionRefusedError):
+            time.sleep(0.05)
+    subscriber.sendall(b'{"type":"subscribe"}\n')
+    subscriber_file = subscriber.makefile("r", encoding="utf-8")
+    assert json.loads(subscriber_file.readline())["type"] == "status"
     send({"type": "ready"})
     send({"type": "snapshot", "status": {"connected": True, "unreadTotal": 7, "accounts": []}})
+    pushed = json.loads(subscriber_file.readline())
+    assert pushed["type"] == "status"
+    assert pushed["status"]["unreadTotal"] == 7
     time.sleep(0.3)
     status = json.loads(subprocess.check_output([helper, "status"], text=True))
     assert status["connected"] is True
@@ -68,6 +83,7 @@ try:
     assert restart["ok"] is True
     host.wait(timeout=3)
 finally:
+    subscriber.close()
     if host.poll() is None:
         host.terminate()
         host.wait(timeout=3)

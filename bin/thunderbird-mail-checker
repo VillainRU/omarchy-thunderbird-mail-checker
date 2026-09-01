@@ -177,8 +177,23 @@ def native_host():
     server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     server.bind(str(SOCKET_PATH)); os.chmod(SOCKET_PATH, 0o600); server.listen(8); server.settimeout(0.2)
     pending = {}
+    subscribers = set()
     native_ready = False
     inbound = queue.Queue()
+
+    def send_status(client, status):
+        client.sendall((json.dumps({"type": "status", "status": status}, ensure_ascii=False) + "\n").encode())
+
+    def broadcast_status(status):
+        stale = []
+        for subscriber in subscribers:
+            try:
+                send_status(subscriber, status)
+            except OSError:
+                stale.append(subscriber)
+        for subscriber in stale:
+            subscribers.discard(subscriber)
+            subscriber.close()
 
     def read_from_extension():
         try:
@@ -203,8 +218,12 @@ def native_host():
                 request = json.loads(raw.decode()) if raw else {}
                 if request.get("type") == "status":
                     client.sendall((json.dumps({"ok": True, "status": load_json(STATUS_PATH, fallback_status())}, ensure_ascii=False) + "\n").encode()); client.close()
+                elif request.get("type") == "subscribe":
+                    send_status(client, load_json(STATUS_PATH, fallback_status()))
+                    subscribers.add(client)
                 elif request.get("type") == "restart":
                     client.sendall(b'{"ok":true}\n'); client.close(); server.close()
+                    for subscriber in subscribers: subscriber.close()
                     try: SOCKET_PATH.unlink()
                     except FileNotFoundError: pass
                     # The native-messaging reader blocks on Thunderbird's stdin.
@@ -227,11 +246,15 @@ def native_host():
                 except queue.Empty: break
                 if message is None: return
                 kind = message.get("type")
-                if kind == "snapshot": atomic_json(STATUS_PATH, message.get("status", {}))
+                if kind == "snapshot":
+                    status = message.get("status", {})
+                    atomic_json(STATUS_PATH, status)
+                    broadcast_status(status)
                 elif kind == "error":
                     status = load_json(STATUS_PATH, fallback_status())
                     status.update({"connected": True, "setupRequired": False, "lastError": message.get("error", "Unknown extension error")})
                     atomic_json(STATUS_PATH, status)
+                    broadcast_status(status)
                 elif kind == "ready":
                     native_ready = True
                 elif kind == "action-result":
@@ -241,6 +264,7 @@ def native_host():
                         finally: client.close()
     finally:
         for client in pending.values(): client.close()
+        for subscriber in subscribers: subscriber.close()
         server.close()
         try: SOCKET_PATH.unlink()
         except FileNotFoundError: pass
