@@ -1,45 +1,73 @@
 # Thunderbird Mail Checker
 
-An Omarchy QuickShell plugin that shows the total number of unread Inbox messages, lists only mailboxes with unread mail, and reveals the five newest unread messages per mailbox. The message controls use Thunderbird's own APIs: reply opens a normal reply composer, delete follows the account's Trash behavior, and spam marks the message as junk then moves it to the account Junk folder when it exists.
+An Omarchy QuickShell bar widget for unread Thunderbird Inbox mail. It shows the total unread count, groups messages by account, and previews the five newest unread messages per account.
 
-## Privacy and security
+![Thunderbird Mail Checker panel](preview.png)
 
-The plugin has no network backend and never reads Thunderbird passwords, OAuth tokens, or message bodies. Its companion MailExtension sends only the metadata needed by the panel (account label, sender, subject, date, star, attachment flag and internal message id) to a local Unix socket and to a mode-0600 local cache. Mailbox labels, senders, and subjects are rendered only as plain text. Actions are sent only to a live Thunderbird bridge and are never queued across restarts. Thunderbird's extension permission screen is the single authorization point for mailbox access.
+**Current versions:** Omarchy plugin `0.1.21` · Thunderbird MailExtension `0.1.5` · Thunderbird `128+`
 
-## Install
+## Features
+
+- Updates after Thunderbird mail events, with a ten-minute reconciliation pass instead of continuous polling.
+- Opens messages and provides Reply, Move to Trash, and Mark as spam actions through Thunderbird APIs.
+- Shows starred and attachment indicators without reading message bodies.
+- Supports Full notifications (sender and subject) and Private notifications (count only).
+- Follows Thunderbird's English or Russian UI language and Omarchy's global Silence Notifications mode.
+- Displays bridge health in the panel; click the Thunderbird icon to reconnect it.
+
+## Installation
+
+The widget and Thunderbird extension are installed separately.
 
 ```bash
-omarchy plugin add https://github.com/VillainRU/omarchy-thunderbird-mail-checker.git
-omarchy plugin enable io.github.villainru.thunderbird-mail-checker
+omarchy plugin add https://github.com/VillainRU/omarchy-thunderbird-mail-checker.git --enable
 ~/.config/omarchy/plugins/io.github.villainru.thunderbird-mail-checker/bin/thunderbird-mail-checker setup
 ```
 
-Then open Thunderbird → Add-ons and Themes → Extensions → gear menu → **Install Add-on From File**, and select the `thunderbird/thunderbird-mail-checker.xpi` path printed by `setup`. Accept Thunderbird's listed permissions and restart Thunderbird once. The widget defaults to the right section; move it with `omarchy bar move io.github.villainru.thunderbird-mail-checker --section right` if desired.
+The second command registers the local native-messaging bridge and prints the bundled XPI path. In Thunderbird, open **Add-ons and Themes → Extensions → gear menu → Install Add-on From File**, select `thunderbird/thunderbird-mail-checker.xpi` from that path, accept the requested permissions, and restart Thunderbird once.
 
-The popup always follows Thunderbird's UI language. Its header has a notification-mode switch: Full shows the sender and subject for one message, while Private hides them. New arrivals generate one summary notification; the first connection also summarizes existing unread mail as requested. Omarchy's global Silence Notifications mode always suppresses these alerts.
+The widget starts in the right bar section. Move it when needed:
 
-## Updates
+```bash
+omarchy bar move io.github.villainru.thunderbird-mail-checker --section right
+```
 
-Published changes are listed in [CHANGELOG.md](CHANGELOG.md). The plugin version and companion MailExtension version are maintained separately; the current versions are shown in the root `manifest.json` and the packaged `thunderbird/thunderbird-mail-checker.xpi` respectively.
+## Updating
 
-## Remove
+```bash
+omarchy plugin update io.github.villainru.thunderbird-mail-checker --yes
+~/.config/omarchy/plugins/io.github.villainru.thunderbird-mail-checker/bin/thunderbird-mail-checker setup
+```
 
-1. In Thunderbird, open **Add-ons and Themes** and remove **Thunderbird Mail Checker**.
-2. Remove the Omarchy plugin:
+If [CHANGELOG.md](CHANGELOG.md) lists a newer companion MailExtension, install the newly bundled XPI through Thunderbird again. Plugin and MailExtension versions are intentionally independent.
 
-   ```bash
-   omarchy plugin disable io.github.villainru.thunderbird-mail-checker
-   omarchy plugin remove io.github.villainru.thunderbird-mail-checker
-   ```
+## How it works
 
-3. Remove only the native-messaging registration created during setup:
+The MailExtension reads Inbox counters, queries unread messages, and coalesces related mail events into one refresh. It caches attachment flags with bounded memory. A persistent native-messaging host forwards snapshots and actions over a user-only Unix socket, so the QuickShell panel does not spawn periodic helper processes.
 
-   ```bash
-   rm -f ~/.mozilla/native-messaging-hosts/io.github.villainru.thunderbird_mail_checker.json
-   ```
+No remote service is used. The bridge never accesses passwords, OAuth tokens, or message bodies. It stores only panel metadata in a mode-`0600` cache and renders Thunderbird-controlled text as plain text. Actions fail safely while Thunderbird is unavailable and are never queued across restarts.
 
-This does not delete any Thunderbird messages or account data.
+## Troubleshooting
+
+```bash
+~/.config/omarchy/plugins/io.github.villainru.thunderbird-mail-checker/bin/thunderbird-mail-checker status
+omarchy plugin validate ~/.config/omarchy/plugins/io.github.villainru.thunderbird-mail-checker
+```
+
+A red Thunderbird title means the bridge is offline. Confirm that Thunderbird is running, MailExtension `0.1.5` is enabled, and rerun `setup` if the plugin directory moved. Then click the Thunderbird icon in the panel or restart Thunderbird.
+
+## Removal
+
+Remove **Thunderbird Mail Checker** from Thunderbird first, then run:
+
+```bash
+omarchy plugin disable io.github.villainru.thunderbird-mail-checker
+omarchy plugin remove io.github.villainru.thunderbird-mail-checker --yes
+rm -f ~/.mozilla/native-messaging-hosts/io.github.villainru.thunderbird_mail_checker.json
+```
+
+Cached panel metadata can optionally be removed from `~/.local/state/thunderbird-mail-checker/`. Removing the plugin does not delete messages or account data.
 
 ## Development
 
-`make xpi` packs the companion add-on. `make check` validates JSON, Python syntax, and runs protocol tests. The native host is standard-library Python 3 and needs no package installation.
+`make xpi` rebuilds the companion extension. `make check` validates both manifests, JavaScript, Python and shell syntax, and runs the background and protocol regression tests. The native host uses only the Python 3 standard library; XPI packaging requires `zip`.
