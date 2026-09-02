@@ -317,6 +317,7 @@ def native_host():
                     broadcast_status(current_status)
                 elif kind == "ready":
                     native_ready = True
+                    write_native({"type": "ready"})
                 elif kind == "action-result":
                     request_id = message.get("requestId")
                     request = pending.pop(request_id, None)

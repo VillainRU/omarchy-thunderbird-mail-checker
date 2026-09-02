@@ -2,6 +2,12 @@
 
 All notable changes to Thunderbird Mail Checker are documented here.
 
+## [0.1.20] - 2026-09-02
+
+### Fixed
+
+- Complete the native-messaging ready handshake so a fresh Thunderbird connection produces its first snapshot immediately instead of waiting for the periodic reconciliation.
+
 ## [0.1.19] - 2026-09-01
 
 ### Performance

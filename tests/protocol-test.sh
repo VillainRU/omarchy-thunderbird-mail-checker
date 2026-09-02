@@ -62,6 +62,9 @@ try:
     subscriber_file = subscriber.makefile("r", encoding="utf-8")
     assert json.loads(subscriber_file.readline())["type"] == "status"
     send({"type": "ready"})
+    header = host.stdout.read(4)
+    size = struct.unpack("<I", header)[0]
+    assert json.loads(host.stdout.read(size).decode())["type"] == "ready"
     send({"type": "snapshot", "status": {"connected": True, "unreadTotal": 7, "accounts": []}})
     pushed = json.loads(subscriber_file.readline())
     assert pushed["type"] == "status"
