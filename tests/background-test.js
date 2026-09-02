@@ -8,7 +8,7 @@ function message(id, read = true) {
   return { id, read, author: `sender-${id}`, subject: `subject-${id}`, date: id, flagged: false };
 }
 
-function loadBackground({ messages, pageSize = 100, browserVersion = "128.0" }) {
+function loadBackground({ messages, pageSize = 100, browserVersion = "128.0", rejectSortedQuery = false }) {
   const posts = [];
   const calls = { list: 0, query: [], abortList: 0, listAttachments: 0, activeQueries: 0, maxActiveQueries: 0 };
   const intervals = [];
@@ -50,6 +50,10 @@ function loadBackground({ messages, pageSize = 100, browserVersion = "128.0" }) 
           calls.activeQueries += 1;
           calls.maxActiveQueries = Math.max(calls.maxActiveQueries, calls.activeQueries);
           calls.query.push(query);
+          if (rejectSortedQuery && query.sortType) {
+            calls.activeQueries -= 1;
+            throw new TypeError("Unexpected properties: sortOrder, sortType");
+          }
           let result = messages.filter(value => query.unread ? !value.read : true);
           if (query.sortType === "date") result = result.sort((a, b) => Number(b.date) - Number(a.date));
           await Promise.resolve();
@@ -111,6 +115,18 @@ async function testRefreshCoalescing() {
   assert.equal(events.onDeleted.listeners.length, 1);
 }
 
+async function testSortedQueryFallback() {
+  const messages = Array.from({ length: 20 }, (_, index) => message(index + 1, index < 15));
+  const { context, posts, calls } = loadBackground({ messages, browserVersion: "153.0.2", rejectSortedQuery: true });
+  await vm.runInContext("snapshot(null)", context);
+  const status = posts.find(value => value.type === "snapshot").status;
+  assert.equal(status.unreadTotal, 5);
+  assert.equal(status.diagnostics.scannedMessages, 5);
+  assert.equal(calls.query.length, 2);
+  assert.equal(calls.query[0].sortType, "date");
+  assert.equal(calls.query[1].sortType, undefined);
+}
+
 async function testAttachmentCache() {
   const messages = [message(1, false), message(2, false)];
   const { context, posts, calls } = loadBackground({ messages });
@@ -124,5 +140,5 @@ async function testAttachmentCache() {
   assert.equal(vm.runInContext("attachmentCache.size", context), 200);
 }
 
-Promise.all([testLargeInboxBaseline(), testServerSidePreviewLimit(), testRefreshCoalescing(), testAttachmentCache()])
+Promise.all([testLargeInboxBaseline(), testServerSidePreviewLimit(), testRefreshCoalescing(), testSortedQueryFallback(), testAttachmentCache()])
   .then(() => console.log("background scheduling: ok"));

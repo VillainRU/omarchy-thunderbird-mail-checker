@@ -2,6 +2,16 @@
 
 All notable changes to Thunderbird Mail Checker are documented here.
 
+## [0.1.21] - 2026-09-02
+
+### Fixed
+
+- Fall back to a compatible unread-only query when a Thunderbird Manifest V2 build rejects server-side sorting fields.
+
+### Companion MailExtension
+
+- Version 0.1.5 is included with runtime query-capability fallback coverage.
+
 ## [0.1.20] - 2026-09-02
 
 ### Fixed

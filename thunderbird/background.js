@@ -69,13 +69,16 @@ async function unreadInFolder(folder, diagnostics) {
 
   const query = { folderId: folder.id, unread: true };
   if (await supportsSortedQueries()) {
-    query.sortType = "date";
-    query.sortOrder = "descending";
-    query.messagesPerPage = 5;
-    const page = await messenger.messages.query(query);
-    diagnostics.scannedMessages += page.messages.length;
-    if (page.id) await messenger.messages.abortList(page.id);
-    return { unreadCount, messages: page.messages.slice(0, 5) };
+    try {
+      const sortedQuery = { ...query, sortType: "date", sortOrder: "descending", messagesPerPage: 5 };
+      const page = await messenger.messages.query(sortedQuery);
+      diagnostics.scannedMessages += page.messages.length;
+      if (page.id) await messenger.messages.abortList(page.id);
+      return { unreadCount, messages: page.messages.slice(0, 5) };
+    } catch (error) {
+      if (!/Unexpected properties.*sort/i.test(String(error))) throw error;
+      sortedQuerySupport = false;
+    }
   }
   return { unreadCount, messages: await collectMessages(await messenger.messages.query(query), diagnostics) };
 }
