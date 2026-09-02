@@ -2,6 +2,13 @@
 
 All notable changes to Thunderbird Mail Checker are documented here.
 
+## [0.1.23] - 2026-09-02
+
+### Fixed
+
+- Focus Thunderbird and switch to its workspace after a message is opened from the event-driven QuickShell socket path.
+- Centralize focus handling in the native host so socket and CLI actions focus exactly once.
+
 ## [0.1.22] - 2026-09-02
 
 ### Security

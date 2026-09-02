@@ -177,8 +177,6 @@ def command_action(action, message_id):
     try:
         response = request_socket(payload)
         if response:
-            if response.get("ok") and action == "open":
-                focus_thunderbird()
             print(json.dumps(response, ensure_ascii=False))
             return 0 if response.get("ok") else 1
     except OSError:
@@ -299,7 +297,12 @@ def native_host():
             elif not request_id or request_id in pending:
                 send_json(client, {"type": "action-result", "requestId": request_id, "ok": False, "error": "Invalid request id"}, close_after=not subscribed)
             else:
-                pending[request_id] = {"client": client, "closeAfter": not subscribed, "deadline": time.monotonic() + 5}
+                pending[request_id] = {
+                    "client": client,
+                    "closeAfter": not subscribed,
+                    "deadline": time.monotonic() + 5,
+                    "action": request.get("action"),
+                }
                 write_native(request)
         else:
             send_json(client, {"ok": False, "error": "bad request"}, close_after=not subscribed)
@@ -387,7 +390,10 @@ def native_host():
                     request_id = message.get("requestId")
                     request = pending.pop(request_id, None)
                     if request:
-                        send_json(request["client"], {"type": "action-result", "requestId": request_id, "ok": bool(message.get("ok")), "error": message.get("error", "")}, close_after=request["closeAfter"])
+                        succeeded = bool(message.get("ok"))
+                        if succeeded and request["action"] == "open":
+                            focus_thunderbird()
+                        send_json(request["client"], {"type": "action-result", "requestId": request_id, "ok": succeeded, "error": message.get("error", "")}, close_after=request["closeAfter"])
                 elif kind == "reader-error":
                     running = False
             now = time.monotonic()

@@ -65,6 +65,24 @@ PY
 
 echo "unavailable action: not queued"
 
+mock_bin="$task_tmp/mock-bin"
+mkdir -p "$mock_bin"
+export FOCUS_LOG="$task_tmp/hyprctl-focus.log"
+cat > "$mock_bin/hyprctl" <<'SH'
+#!/bin/bash
+set -euo pipefail
+if [[ ${1:-} == "-j" && ${2:-} == "clients" ]]; then
+  printf '%s\n' '[{"address":"0xf00","class":"org.mozilla.Thunderbird","initialClass":"org.mozilla.Thunderbird","focusHistoryID":0}]'
+elif [[ ${1:-} == "dispatch" ]]; then
+  printf '%s\n' "$*" >> "$FOCUS_LOG"
+  printf '%s\n' ok
+else
+  exit 1
+fi
+SH
+chmod 0700 "$mock_bin/hyprctl"
+export PATH="$mock_bin:$PATH"
+
 python - "$helper" <<'PY'
 import json
 import os
@@ -83,6 +101,13 @@ def send(value):
     raw = json.dumps(value).encode()
     host.stdin.write(struct.pack("<I", len(raw)) + raw)
     host.stdin.flush()
+
+def focus_commands():
+    try:
+        with open(os.environ["FOCUS_LOG"], encoding="utf-8") as source:
+            return source.read().splitlines()
+    except FileNotFoundError:
+        return []
 
 try:
     socket_path = os.path.join(os.environ["XDG_RUNTIME_DIR"], "thunderbird-mail-checker.sock")
@@ -120,6 +145,15 @@ try:
     socket_result = json.loads(subscriber_file.readline())
     assert socket_result["type"] == "action-result"
     assert socket_result["ok"] is True
+    assert focus_commands() == ['dispatch hl.dsp.focus({ window = "address:0xf00" })']
+    subscriber.sendall(b'{"type":"action","requestId":"failed-open","action":"open","messageId":999}\n')
+    header = host.stdout.read(4)
+    size = struct.unpack("<I", header)[0]
+    failed_request = json.loads(host.stdout.read(size).decode())
+    send({"type": "action-result", "requestId": failed_request["requestId"], "ok": False, "error": "test failure"})
+    failed_result = json.loads(subscriber_file.readline())
+    assert failed_result["ok"] is False
+    assert focus_commands() == ['dispatch hl.dsp.focus({ window = "address:0xf00" })']
     time.sleep(0.3)
     status = json.loads(subprocess.check_output([helper, "status"], text=True))
     assert status["connected"] is True
@@ -133,6 +167,10 @@ try:
     assert request["messageId"] == 123
     send({"type": "action-result", "requestId": request["requestId"], "ok": True})
     assert json.loads(action.communicate(timeout=3)[0])["ok"] is True
+    assert focus_commands() == [
+        'dispatch hl.dsp.focus({ window = "address:0xf00" })',
+        'dispatch hl.dsp.focus({ window = "address:0xf00" })',
+    ]
     restart = json.loads(subprocess.check_output([helper, "restart"], text=True))
     assert restart["ok"] is True
     host.wait(timeout=3)
