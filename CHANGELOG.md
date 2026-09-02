@@ -2,6 +2,13 @@
 
 All notable changes to Thunderbird Mail Checker are documented here.
 
+## [0.1.22] - 2026-09-02
+
+### Security
+
+- Reject symlinked, multiply linked, non-owner, non-private, non-regular, and oversized cached status files.
+- Write cached JSON through unpredictable owner-only temporary files opened with `O_NOFOLLOW`, then atomically replace the destination relative to a pinned directory descriptor.
+
 ## [0.1.21] - 2026-09-02
 
 ### Fixed

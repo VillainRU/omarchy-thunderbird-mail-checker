@@ -4,7 +4,7 @@ An Omarchy QuickShell bar widget for unread Thunderbird Inbox mail. It shows the
 
 ![Thunderbird Mail Checker panel](preview.png)
 
-**Current versions:** Omarchy plugin `0.1.21` · Thunderbird MailExtension `0.1.5` · Thunderbird `128+`
+**Current versions:** Omarchy plugin `0.1.22` · Thunderbird MailExtension `0.1.5` · Thunderbird `128+`
 
 ## Features
 

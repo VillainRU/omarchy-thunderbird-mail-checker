@@ -12,6 +12,7 @@ import pathlib
 import secrets
 import selectors
 import socket
+import stat
 import struct
 import subprocess
 import sys
@@ -29,19 +30,83 @@ RUNTIME_DIR = pathlib.Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp"))
 SOCKET_PATH = RUNTIME_DIR / (APP + ".sock")
 STATUS_PATH = STATE_DIR / "status.json"
 LEGACY_QUEUE_PATH = STATE_DIR / "queued-actions.json"
+MAX_JSON_BYTES = 1024 * 1024
+
+def open_private_directory(path, create=False):
+    if create:
+        path.mkdir(mode=0o700, parents=True, exist_ok=True)
+    descriptor = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    metadata = os.fstat(descriptor)
+    if not stat.S_ISDIR(metadata.st_mode) or metadata.st_uid != os.getuid():
+        os.close(descriptor)
+        raise PermissionError("unsafe state directory")
+    return descriptor
 
 def atomic_json(path, value):
-    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(json.dumps(value, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    temporary.chmod(0o600)
-    temporary.replace(path)
+    payload = json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    if len(payload) > MAX_JSON_BYTES:
+        raise ValueError("state JSON is too large")
+    directory = open_private_directory(path.parent, create=True)
+    temporary = None
+    try:
+        for _ in range(10):
+            candidate = f".{path.name}.{secrets.token_hex(12)}.tmp"
+            try:
+                descriptor = os.open(
+                    candidate,
+                    os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC,
+                    0o600,
+                    dir_fd=directory,
+                )
+                temporary = candidate
+                break
+            except FileExistsError:
+                continue
+        else:
+            raise FileExistsError("cannot allocate state temporary file")
+        with os.fdopen(descriptor, "wb") as output:
+            output.write(payload)
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(temporary, path.name, src_dir_fd=directory, dst_dir_fd=directory)
+        temporary = None
+        os.fsync(directory)
+    finally:
+        if temporary is not None:
+            try:
+                os.unlink(temporary, dir_fd=directory)
+            except FileNotFoundError:
+                pass
+        os.close(directory)
 
 def load_json(path, fallback):
+    directory = None
+    descriptor = None
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+        directory = open_private_directory(path.parent)
+        descriptor = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=directory)
+        metadata = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(metadata.st_mode)
+            or metadata.st_uid != os.getuid()
+            or metadata.st_nlink != 1
+            or metadata.st_mode & 0o077
+            or metadata.st_size > MAX_JSON_BYTES
+        ):
+            return fallback
+        with os.fdopen(descriptor, "rb") as source:
+            descriptor = None
+            payload = source.read(MAX_JSON_BYTES + 1)
+        if len(payload) > MAX_JSON_BYTES:
+            return fallback
+        return json.loads(payload.decode("utf-8"))
+    except (OSError, ValueError, UnicodeError):
         return fallback
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        if directory is not None:
+            os.close(directory)
 
 def request_socket(payload, timeout=3):
     client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)

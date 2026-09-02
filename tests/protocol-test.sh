@@ -18,6 +18,39 @@ PY
 
 echo "protocol fallback: ok"
 
+state_dir="$XDG_STATE_HOME/thunderbird-mail-checker"
+mkdir -p "$state_dir"
+python - "$state_dir/status.json" <<'PY'
+import pathlib, sys
+pathlib.Path(sys.argv[1]).write_bytes(b'{"padding":"' + b'x' * (2 * 1024 * 1024) + b'"}')
+PY
+chmod 0600 "$state_dir/status.json"
+"$helper" status > "$task_tmp/oversized-status.json"
+python - "$task_tmp/oversized-status.json" <<'PY'
+import json, sys
+status = json.load(open(sys.argv[1]))
+assert status["connected"] is False
+assert status["setupRequired"] is True
+assert "padding" not in status
+PY
+
+export SYMLINK_VICTIM="$task_tmp/protected.json"
+printf '%s\n' '{"protected":true}' > "$SYMLINK_VICTIM"
+chmod 0600 "$SYMLINK_VICTIM"
+rm "$state_dir/status.json"
+ln -s "$SYMLINK_VICTIM" "$state_dir/status.json"
+ln -s "$SYMLINK_VICTIM" "$state_dir/status.json.tmp"
+"$helper" status > "$task_tmp/symlink-status.json"
+python - "$task_tmp/symlink-status.json" <<'PY'
+import json, sys
+status = json.load(open(sys.argv[1]))
+assert status["connected"] is False
+assert status["setupRequired"] is True
+assert "protected" not in status
+PY
+
+echo "status file safety: ok"
+
 if "$helper" action open 123 > "$task_tmp/unavailable-action.json"; then
   echo "an unavailable action must fail instead of being queued" >&2
   exit 1
@@ -36,6 +69,7 @@ python - "$helper" <<'PY'
 import json
 import os
 import socket
+import stat
 import struct
 import subprocess
 import sys
@@ -69,6 +103,13 @@ try:
     pushed = json.loads(subscriber_file.readline())
     assert pushed["type"] == "status"
     assert pushed["status"]["unreadTotal"] == 7
+    state_dir = os.path.join(os.environ["XDG_STATE_HOME"], "thunderbird-mail-checker")
+    status_path = os.path.join(state_dir, "status.json")
+    assert not os.path.islink(status_path)
+    assert os.path.isfile(status_path)
+    assert stat.S_IMODE(os.stat(status_path).st_mode) == 0o600
+    assert open(os.environ["SYMLINK_VICTIM"], encoding="utf-8").read() == '{"protected":true}\n'
+    assert os.path.islink(os.path.join(state_dir, "status.json.tmp"))
     subscriber.sendall(b'{"type":"action","requestId":"socket-action","action":"open","messageId":321}\n')
     header = host.stdout.read(4)
     size = struct.unpack("<I", header)[0]
