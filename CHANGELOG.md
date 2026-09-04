@@ -2,6 +2,12 @@
 
 All notable changes to Thunderbird Mail Checker are documented here.
 
+## [0.1.24] - 2026-09-04
+
+### Fixed
+
+- Recreate the QuickShell Unix-socket client after connection errors and disconnects, allowing the widget to recover automatically when Thunderbird starts after Omarchy Shell.
+
 ## [0.1.23] - 2026-09-02
 
 ### Fixed

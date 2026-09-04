@@ -13,6 +13,7 @@ check:
 	python -m json.tool thunderbird/manifest.webextension.json >/dev/null
 	node --check thunderbird/background.js
 	node tests/background-test.js
+	node tests/panel-reconnect-test.js
 	python -m py_compile bin/thunderbird-mail-checker
 	bash -n bin/native-host tests/protocol-test.sh
 	./tests/protocol-test.sh

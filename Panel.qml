@@ -28,6 +28,8 @@ Panel {
   readonly property bool bridgeActive: snapshot.connected === true
   readonly property color bridgeColor: bridgeActive ? "#6dca76" : Color.urgent
   readonly property string socketPath: String(Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/thunderbird-mail-checker.sock"
+  readonly property var bridgeSocket: bridgeSocketLoader.item
+  readonly property bool bridgeConnected: bridgeSocket && bridgeSocket.connected
 
   function tr(key) { return Model.text(lang, key) }
   function persistSettings(values) {
@@ -48,9 +50,17 @@ Panel {
   function close() { controller.hide() }
   function toggle() { opened ? close() : open() }
   function closeForPopoutSwitch() { root.close() }
-  function refresh() { if (!bridgeSocket.connected) bridgeSocket.connected = true }
+  function scheduleReconnect() {
+    actionPending = false
+    restartPending = false
+    bridgeSocketLoader.active = false
+    reconnectTimer.restart()
+  }
+  function refresh() {
+    if (!bridgeConnected) scheduleReconnect()
+  }
   function restartBridge() {
-    if (restartPending || !bridgeSocket.connected) return
+    if (restartPending || !bridgeConnected) return
     restartPending = true
     bridgeSocket.write('{"type":"restart"}\n')
     bridgeSocket.flush()
@@ -79,7 +89,7 @@ Panel {
     return (first.author || tr("newMail")) + " — " + (first.subject || "")
   }
   function runAction(action, message) {
-    if (!message || !message.id || actionPending || !bridgeSocket.connected) return
+    if (!message || !message.id || actionPending || !bridgeConnected) return
     actionPending = true
     nextRequestId += 1
     bridgeSocket.write(JSON.stringify({ type: "action", requestId: "qml-" + nextRequestId, action: action, messageId: Number(message.id) }) + "\n")
@@ -100,29 +110,34 @@ Panel {
     expandedAccounts = next
   }
 
-  Socket {
-    id: bridgeSocket
-    path: root.socketPath
-    parser: SplitParser {
-      onRead: function(line) {
-        var message = Model.safeJson(line, null)
-        if (message && message.type === "status") root.applySnapshot(message.status)
-        else if (message && message.type === "action-result") root.actionPending = false
-      }
-    }
-    onConnectedChanged: {
-      if (connected) {
-        root.restartPending = false
-        write('{"type":"subscribe"}\n')
-        flush()
-      } else {
-        root.actionPending = false
-        reconnectTimer.restart()
+  Loader {
+    id: bridgeSocketLoader
+    active: true
+    sourceComponent: Component {
+      Socket {
+        path: root.socketPath
+        parser: SplitParser {
+          onRead: function(line) {
+            var message = Model.safeJson(line, null)
+            if (message && message.type === "status") root.applySnapshot(message.status)
+            else if (message && message.type === "action-result") root.actionPending = false
+          }
+        }
+        onConnectedChanged: {
+          if (connected) {
+            root.restartPending = false
+            write('{"type":"subscribe"}\n')
+            flush()
+          } else {
+            root.scheduleReconnect()
+          }
+        }
+        onError: function(error) { root.scheduleReconnect() }
+        Component.onCompleted: connected = true
       }
     }
   }
-  Component.onCompleted: bridgeSocket.connected = true
-  Timer { id: reconnectTimer; interval: 2000; repeat: false; onTriggered: bridgeSocket.connected = true }
+  Timer { id: reconnectTimer; interval: 2000; repeat: false; onTriggered: bridgeSocketLoader.active = true }
 
   Process { id: notificationProc }
 
