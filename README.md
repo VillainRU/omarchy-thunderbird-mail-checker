@@ -4,7 +4,7 @@ An Omarchy QuickShell bar widget for unread Thunderbird Inbox mail. It shows the
 
 ![Thunderbird Mail Checker panel](preview.png)
 
-**Current versions:** Omarchy plugin `0.1.23` · Thunderbird MailExtension `0.1.5` · Thunderbird `128+`
+**Current versions:** Omarchy plugin `0.1.24` · Thunderbird MailExtension `0.1.5` · Thunderbird `128+`
 
 ## Features
 
@@ -13,7 +13,7 @@ An Omarchy QuickShell bar widget for unread Thunderbird Inbox mail. It shows the
 - Shows starred and attachment indicators without reading message bodies.
 - Supports Full notifications (sender and subject) and Private notifications (count only).
 - Follows Thunderbird's English or Russian UI language and Omarchy's global Silence Notifications mode.
-- Displays bridge health in the panel; click the Thunderbird icon to reconnect it.
+- Displays bridge health in the panel and reconnects automatically after Thunderbird starts or restarts.
 
 ## Installation
 
@@ -54,7 +54,7 @@ No remote service is used. The bridge never accesses passwords, OAuth tokens, or
 omarchy plugin validate ~/.config/omarchy/plugins/io.github.villainru.thunderbird-mail-checker
 ```
 
-A red Thunderbird title means the bridge is offline. Confirm that Thunderbird is running, MailExtension `0.1.5` is enabled, and rerun `setup` if the plugin directory moved. Then click the Thunderbird icon in the panel or restart Thunderbird.
+A red Thunderbird title means the bridge is offline. Confirm that Thunderbird is running, MailExtension `0.1.5` is enabled, and rerun `setup` if the plugin directory moved. The widget retries every two seconds; middle-click its bar icon to request an immediate fresh connection.
 
 ## Removal
 
