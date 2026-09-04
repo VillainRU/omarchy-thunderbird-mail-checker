@@ -20,16 +20,17 @@ Panel {
   property int nextRequestId: 0
   property bool actionPending: false
   property bool restartPending: false
+  property bool socketOnline: false
   property var expandedAccounts: ({})
   readonly property string lang: Model.localeCode("thunderbird", "", snapshot.thunderbirdLanguage)
   readonly property int unreadCount: Number(snapshot.unreadTotal || 0)
   readonly property string tooltip: unreadCount > 0 ? unreadCount + " " + Model.text(lang, "unread") : Model.text(lang, "noUnread")
   readonly property var accounts: snapshot.accounts || []
-  readonly property bool bridgeActive: snapshot.connected === true
-  readonly property color bridgeColor: bridgeActive ? "#6dca76" : Color.urgent
   readonly property string socketPath: String(Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/thunderbird-mail-checker.sock"
   readonly property var bridgeSocket: bridgeSocketLoader.item
-  readonly property bool bridgeConnected: bridgeSocket && bridgeSocket.connected
+  readonly property bool bridgeConnected: socketOnline && bridgeSocket !== null
+  readonly property bool bridgeActive: bridgeConnected && snapshot.connected === true
+  readonly property color bridgeColor: bridgeActive ? "#6dca76" : Color.urgent
 
   function tr(key) { return Model.text(lang, key) }
   function persistSettings(values) {
@@ -50,14 +51,18 @@ Panel {
   function close() { controller.hide() }
   function toggle() { opened ? close() : open() }
   function closeForPopoutSwitch() { root.close() }
-  function scheduleReconnect() {
+  function resetConnectionState() {
     actionPending = false
     restartPending = false
+    socketOnline = false
+  }
+  function recreateSocket() {
+    socketOnline = false
     bridgeSocketLoader.active = false
-    reconnectTimer.restart()
+    socketCreateTimer.restart()
   }
   function refresh() {
-    if (!bridgeConnected) scheduleReconnect()
+    if (!bridgeConnected) recreateSocket()
   }
   function restartBridge() {
     if (restartPending || !bridgeConnected) return
@@ -125,19 +130,27 @@ Panel {
         }
         onConnectedChanged: {
           if (connected) {
+            root.socketOnline = true
             root.restartPending = false
             write('{"type":"subscribe"}\n')
             flush()
           } else {
-            root.scheduleReconnect()
+            root.resetConnectionState()
           }
         }
-        onError: function(error) { root.scheduleReconnect() }
+        onError: function(error) { root.resetConnectionState() }
         Component.onCompleted: connected = true
       }
     }
   }
-  Timer { id: reconnectTimer; interval: 2000; repeat: false; onTriggered: bridgeSocketLoader.active = true }
+  Timer {
+    id: reconnectTimer
+    interval: 2000
+    repeat: true
+    running: !root.socketOnline
+    onTriggered: root.recreateSocket()
+  }
+  Timer { id: socketCreateTimer; interval: 1; repeat: false; onTriggered: bridgeSocketLoader.active = true }
 
   Process { id: notificationProc }
 
