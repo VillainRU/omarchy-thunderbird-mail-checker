@@ -2,7 +2,7 @@
 
 Unread Thunderbird mail in the Omarchy bar — fast, private, and event-driven.
 
-[English](#english) · [Русский](#русский)
+[Omarchy Marketplace](https://plugins.omarchy.org/plugin.html?id=io.github.villainru.thunderbird-mail-checker) · [English](#english) · [Русский](#русский)
 
 ![Thunderbird Mail Checker panel](preview.png)
 
@@ -40,6 +40,14 @@ omarchy plugin update io.github.villainru.thunderbird-mail-checker --yes
 
 The widget reconnects every two seconds while Thunderbird is unavailable. Reinstall the XPI only when [CHANGELOG.md](CHANGELOG.md) lists a newer MailExtension version.
 
+### Remove
+
+Remove the MailExtension in Thunderbird, then remove the Omarchy plugin:
+
+```bash
+omarchy plugin remove io.github.villainru.thunderbird-mail-checker
+```
+
 ## Русский
 
 Показывает непрочитанные письма Thunderbird прямо в панели Omarchy: общий счётчик, аккаунты и пять последних писем для каждого ящика.
@@ -70,6 +78,14 @@ omarchy plugin update io.github.villainru.thunderbird-mail-checker --yes
 ```
 
 Красный индикатор означает, что мост недоступен. Проверьте, что Thunderbird запущен и MailExtension включено; виджет продолжит попытки подключения автоматически.
+
+### Удаление
+
+Удалите MailExtension в Thunderbird, затем удалите плагин Omarchy:
+
+```bash
+omarchy plugin remove io.github.villainru.thunderbird-mail-checker
+```
 
 ## Architecture and privacy
 
